@@ -6,6 +6,8 @@ import { useState } from 'react'
 import type { Order, OrderStatus, Brand } from '@/types/order'
 import { ORDER_STATUSES } from '@/types/order'
 import { fetcher } from '@/lib/fetcher'
+import NewOrderModal from './NewOrderModal'
+import OrderDetailPanel from './OrderDetailPanel'
 
 export default function KanbanBoard() {
   const { data, error } = useSWR<{ orders: Order[] }>('/api/orders', fetcher, {
@@ -14,6 +16,8 @@ export default function KanbanBoard() {
   })
   const [brandFilter, setBrandFilter] = useState<Brand | '전체'>('전체')
   const [dragError, setDragError] = useState<string | null>(null)
+  const [isNewOrderOpen, setIsNewOrderOpen] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
   const orders = (data?.orders ?? []).filter(
     (order) => brandFilter === '전체' || order.brand === brandFilter
@@ -66,6 +70,9 @@ export default function KanbanBoard() {
             </button>
           ))}
         </div>
+        <button onClick={() => setIsNewOrderOpen(true)} className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+          + 신규문의
+        </button>
       </div>
 
       {dragError && <p className="mb-4 text-sm text-red-600">{dragError}</p>}
@@ -73,15 +80,17 @@ export default function KanbanBoard() {
       <DndContext onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-5 gap-4">
           {ORDER_STATUSES.map((status) => (
-            <BoardColumn key={status} status={status} orders={orders.filter((order) => order.status === status)} />
+            <BoardColumn key={status} status={status} orders={orders.filter((order) => order.status === status)} onSelect={setSelectedOrderId} />
           ))}
         </div>
       </DndContext>
+      {isNewOrderOpen && <NewOrderModal onClose={() => setIsNewOrderOpen(false)} />}
+      {selectedOrderId && <OrderDetailPanel orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />}
     </div>
   )
 }
 
-function BoardColumn({ status, orders }: { status: OrderStatus; orders: Order[] }) {
+function BoardColumn({ status, orders, onSelect }: { status: OrderStatus; orders: Order[]; onSelect: (id: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
   return (
     <div
@@ -92,18 +101,18 @@ function BoardColumn({ status, orders }: { status: OrderStatus; orders: Order[] 
     >
       <h2 className="mb-2 font-semibold">{status}</h2>
       {orders.map((order) => (
-        <OrderCard key={order.id} order={order} />
+        <OrderCard key={order.id} order={order} onSelect={onSelect} />
       ))}
     </div>
   )
 }
 
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, onSelect }: { order: Order; onSelect: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: order.id })
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="mb-2 cursor-pointer rounded bg-white p-3 shadow">
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} onClick={() => onSelect(order.id)} className="mb-2 cursor-pointer rounded bg-white p-3 shadow">
       <div className="flex gap-1 text-xs">
         <span className="rounded bg-purple-100 px-1.5 py-0.5">{order.brand}</span>
         <span className="rounded bg-green-100 px-1.5 py-0.5">{order.customerType}</span>
