@@ -5,8 +5,7 @@ import { DndContext, type DragEndEvent, useDraggable, useDroppable } from '@dnd-
 import { useState } from 'react'
 import type { Order, OrderStatus, Brand } from '@/types/order'
 import { ORDER_STATUSES } from '@/types/order'
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+import { fetcher } from '@/lib/fetcher'
 
 export default function KanbanBoard() {
   const { data, error } = useSWR<{ orders: Order[] }>('/api/orders', fetcher, {
@@ -48,7 +47,7 @@ export default function KanbanBoard() {
     }
   }
 
-  if (error) return <p className="p-8 text-red-600">오더 목록을 불러오지 못했습니다.</p>
+  if (error) return <p className="p-8 text-red-600">{error.message}</p>
   if (!data) return <p className="p-8">불러오는 중...</p>
 
   return (
