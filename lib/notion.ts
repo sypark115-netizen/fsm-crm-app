@@ -74,3 +74,90 @@ export function mapOrderStatusToTrackingStatus(status: OrderStatus): TrackingSta
       return '완료'
   }
 }
+
+import { Client } from '@notionhq/client'
+import { randomUUID } from 'crypto'
+import { requireEnv } from './env'
+import type { NewOrderInput } from '@/types/order'
+
+let notionClient: Client | null = null
+function getClient(): Client {
+  if (!notionClient) notionClient = new Client({ auth: requireEnv('NOTION_TOKEN') })
+  return notionClient
+}
+
+export function __clearNotionClient() {
+  notionClient = null
+}
+
+function databaseId(): string {
+  return requireEnv('NOTION_DATABASE_ID')
+}
+
+export async function listOrders(): Promise<Order[]> {
+  const response = await getClient().databases.query({ database_id: databaseId() })
+  return (response.results as unknown as NotionPage[]).map(mapPageToOrder)
+}
+
+export async function getOrderByToken(token: string): Promise<Order | null> {
+  const response = await getClient().databases.query({
+    database_id: databaseId(),
+    filter: { property: PROPS.trackingToken, rich_text: { equals: token } },
+  })
+  const page = response.results[0] as unknown as NotionPage | undefined
+  return page ? mapPageToOrder(page) : null
+}
+
+export async function createOrder(input: NewOrderInput): Promise<Order> {
+  const trackingToken = randomUUID()
+  const title = `${input.customerName} - ${new Date().toLocaleDateString('ko-KR')}`
+  const page = await getClient().pages.create({
+    parent: { database_id: databaseId() },
+    properties: {
+      [PROPS.title]: { title: [{ text: { content: title } }] },
+      [PROPS.status]: { status: { name: '신규문의' } },
+      [PROPS.brand]: { select: { name: input.brand } },
+      [PROPS.customerType]: { select: { name: input.customerType } },
+      [PROPS.inflowChannel]: { select: { name: input.inflowChannel } },
+      [PROPS.customerName]: { rich_text: [{ text: { content: input.customerName } }] },
+      [PROPS.phone]: { phone_number: input.phone ?? null },
+      [PROPS.address]: { rich_text: [{ text: { content: input.address ?? '' } }] },
+      [PROPS.trackingToken]: { rich_text: [{ text: { content: trackingToken } }] },
+    },
+  })
+  return mapPageToOrder(page as unknown as NotionPage)
+}
+
+export async function updateOrderStatus(id: string, newStatus: OrderStatus): Promise<Order> {
+  const current = await getClient().pages.retrieve({ page_id: id })
+  const currentOrder = mapPageToOrder(current as unknown as NotionPage)
+  const logLine = `[${new Date().toLocaleString('ko-KR')}] 상태변경: ${currentOrder.status}→${newStatus}`
+  const newLog = currentOrder.timelineLog ? `${currentOrder.timelineLog}\n${logLine}` : logLine
+
+  const page = await getClient().pages.update({
+    page_id: id,
+    properties: {
+      [PROPS.status]: { status: { name: newStatus } },
+      [PROPS.timelineLog]: { rich_text: [{ text: { content: newLog } }] },
+    },
+  })
+  return mapPageToOrder(page as unknown as NotionPage)
+}
+
+export async function updateOrderFields(
+  id: string,
+  fields: Partial<Pick<Order, 'memo' | 'visitDate' | 'technician'>>
+): Promise<Order> {
+  const properties: Record<string, unknown> = {}
+  if (fields.memo !== undefined) {
+    properties[PROPS.memo] = { rich_text: [{ text: { content: fields.memo } }] }
+  }
+  if (fields.visitDate !== undefined) {
+    properties[PROPS.visitDate] = fields.visitDate ? { date: { start: fields.visitDate } } : { date: null }
+  }
+  if (fields.technician !== undefined) {
+    properties[PROPS.technician] = { rich_text: [{ text: { content: fields.technician } }] }
+  }
+  const page = await getClient().pages.update({ page_id: id, properties })
+  return mapPageToOrder(page as unknown as NotionPage)
+}
