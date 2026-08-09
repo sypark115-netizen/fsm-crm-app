@@ -1,7 +1,15 @@
 'use client'
 
 import useSWR, { mutate } from 'swr'
-import { DndContext, type DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core'
+import {
+  DndContext,
+  type DragEndEvent,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  PointerSensor,
+} from '@dnd-kit/core'
 import { useState } from 'react'
 import type { Order, OrderStatus, Brand } from '@/types/order'
 import { ORDER_STATUSES } from '@/types/order'
@@ -18,6 +26,7 @@ export default function KanbanBoard() {
   const [dragError, setDragError] = useState<string | null>(null)
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const orders = (data?.orders ?? []).filter(
     (order) => brandFilter === '전체' || order.brand === brandFilter
@@ -77,7 +86,7 @@ export default function KanbanBoard() {
 
       {dragError && <p className="mb-4 text-sm text-red-600">{dragError}</p>}
 
-      <DndContext onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-5 gap-4">
           {ORDER_STATUSES.map((status) => (
             <BoardColumn key={status} status={status} orders={orders.filter((order) => order.status === status)} onSelect={setSelectedOrderId} />

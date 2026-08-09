@@ -11,17 +11,24 @@ export default function OrderDetailPanel({ orderId, onClose }: { orderId: string
   const [memo, setMemo] = useState(order?.memo ?? '')
   const [visitDate, setVisitDate] = useState(order?.visitDate ?? '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!order) return null
 
   async function handleSave() {
     setSaving(true)
-    await fetch(`/api/orders/${orderId}`, {
+    setError(null)
+    const response = await fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ memo, visitDate }),
     })
     setSaving(false)
+    if (!response.ok) {
+      const data = await response.json()
+      setError(data.error ?? '저장에 실패했습니다.')
+      return
+    }
     mutate('/api/orders')
   }
 
@@ -43,6 +50,7 @@ export default function OrderDetailPanel({ orderId, onClose }: { orderId: string
           <label className="text-sm font-medium">메모</label>
           <textarea value={memo} onChange={(e) => setMemo(e.target.value)} className="mt-1 w-full rounded border px-3 py-2" rows={3} />
         </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
         <button onClick={handleSave} disabled={saving} className="rounded bg-blue-600 px-4 py-2 text-white">
           {saving ? '저장 중...' : '저장'}
         </button>

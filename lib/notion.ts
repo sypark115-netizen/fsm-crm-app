@@ -41,21 +41,21 @@ export function mapPageToOrder(page: NotionPage): Order {
   const p = page.properties
   return {
     id: page.id,
-    title: p[PROPS.title]?.title?.[0]?.plain_text ?? '',
+    title: p[PROPS.title]?.title?.map((t) => t.plain_text).join('') ?? '',
     status: (p[PROPS.status]?.status?.name ?? '신규문의') as OrderStatus,
     brand: (p[PROPS.brand]?.select?.name ?? '아삽24') as Brand,
     customerType: (p[PROPS.customerType]?.select?.name ?? 'B2C') as CustomerType,
     inflowChannel: (p[PROPS.inflowChannel]?.select?.name ?? '기타') as InflowChannel,
-    customerName: p[PROPS.customerName]?.rich_text?.[0]?.plain_text ?? '',
+    customerName: p[PROPS.customerName]?.rich_text?.map((t) => t.plain_text).join('') ?? '',
     phone: p[PROPS.phone]?.phone_number ?? '',
-    address: p[PROPS.address]?.rich_text?.[0]?.plain_text ?? '',
+    address: p[PROPS.address]?.rich_text?.map((t) => t.plain_text).join('') ?? '',
     visitDate: p[PROPS.visitDate]?.date?.start ?? null,
     quoteAmount: p[PROPS.quoteAmount]?.number ?? null,
     paymentAmount: p[PROPS.paymentAmount]?.number ?? null,
-    technician: p[PROPS.technician]?.rich_text?.[0]?.plain_text ?? '',
-    memo: p[PROPS.memo]?.rich_text?.[0]?.plain_text ?? '',
-    timelineLog: p[PROPS.timelineLog]?.rich_text?.[0]?.plain_text ?? '',
-    trackingToken: p[PROPS.trackingToken]?.rich_text?.[0]?.plain_text ?? '',
+    technician: p[PROPS.technician]?.rich_text?.map((t) => t.plain_text).join('') ?? '',
+    memo: p[PROPS.memo]?.rich_text?.map((t) => t.plain_text).join('') ?? '',
+    timelineLog: p[PROPS.timelineLog]?.rich_text?.map((t) => t.plain_text).join('') ?? '',
+    trackingToken: p[PROPS.trackingToken]?.rich_text?.map((t) => t.plain_text).join('') ?? '',
     photoLink: p[PROPS.photoLink]?.url ?? null,
     createdAt: page.created_time,
     updatedAt: page.last_edited_time,
@@ -110,8 +110,19 @@ function databaseId(): string {
 
 export async function listOrders(): Promise<Order[]> {
   const dataSourceId = await getDataSourceId()
-  const response = await getClient().dataSources.query({ data_source_id: dataSourceId })
-  return (response.results as unknown as NotionPage[]).map(mapPageToOrder)
+  const results: NotionPage[] = []
+  let cursor: string | undefined
+  let hasMore = true
+  while (hasMore) {
+    const response = await getClient().dataSources.query({
+      data_source_id: dataSourceId,
+      start_cursor: cursor,
+    })
+    results.push(...(response.results as unknown as NotionPage[]))
+    hasMore = response.has_more
+    cursor = response.next_cursor ?? undefined
+  }
+  return results.map(mapPageToOrder)
 }
 
 export async function getOrderByToken(token: string): Promise<Order | null> {
@@ -144,11 +155,22 @@ export async function createOrder(input: NewOrderInput): Promise<Order> {
   return mapPageToOrder(page as unknown as NotionPage)
 }
 
+const MAX_TIMELINE_LOG_LENGTH = 1900
+
+function trimTimelineLog(log: string): string {
+  if (log.length <= MAX_TIMELINE_LOG_LENGTH) return log
+  const lines = log.split('\n')
+  while (lines.length > 1 && lines.join('\n').length > MAX_TIMELINE_LOG_LENGTH) {
+    lines.shift()
+  }
+  return lines.join('\n')
+}
+
 export async function updateOrderStatus(id: string, newStatus: OrderStatus): Promise<Order> {
   const current = await getClient().pages.retrieve({ page_id: id })
   const currentOrder = mapPageToOrder(current as unknown as NotionPage)
   const logLine = `[${new Date().toLocaleString('ko-KR')}] 상태변경: ${currentOrder.status}→${newStatus}`
-  const newLog = currentOrder.timelineLog ? `${currentOrder.timelineLog}\n${logLine}` : logLine
+  const newLog = trimTimelineLog(currentOrder.timelineLog ? `${currentOrder.timelineLog}\n${logLine}` : logLine)
 
   const page = await getClient().pages.update({
     page_id: id,

@@ -8,7 +8,7 @@ const mockDatabaseRetrieve = vi.fn()
 
 vi.mock('@notionhq/client', () => {
   class MockClient {
-    constructor(config: any) {}
+    constructor() {}
     databases = { retrieve: mockDatabaseRetrieve }
     dataSources = { query: mockQuery }
     pages = { create: mockCreate, update: mockUpdate, retrieve: mockRetrieve }
@@ -124,10 +124,11 @@ beforeEach(() => {
 
 describe('listOrders', () => {
   it('노션 쿼리 결과를 Order 배열로 변환한다', async () => {
-    mockQuery.mockResolvedValue({ results: [FIXTURE_PAGE] })
+    mockQuery.mockResolvedValue({ results: [FIXTURE_PAGE], has_more: false, next_cursor: null })
     const orders = await listOrders()
     expect(orders).toHaveLength(1)
     expect(orders[0].customerName).toBe('홍길동')
+    expect(mockQuery).toHaveBeenCalledWith(expect.objectContaining({ data_source_id: 'data-source-1' }))
   })
 })
 
@@ -142,6 +143,7 @@ describe('createOrder', () => {
     })
     expect(mockCreate).toHaveBeenCalledTimes(1)
     const callArgs = mockCreate.mock.calls[0][0]
+    expect(callArgs.parent).toEqual({ database_id: 'test-db-id' })
     expect(callArgs.properties['상태']).toEqual({ status: { name: '신규문의' } })
     expect(callArgs.properties['브랜드']).toEqual({ select: { name: '아삽24' } })
     const token = callArgs.properties['추적토큰'].rich_text[0].text.content
@@ -174,7 +176,7 @@ describe('updateOrderFields', () => {
 
 describe('getOrderByToken', () => {
   it('추적토큰으로 필터링해 조회한다', async () => {
-    mockQuery.mockResolvedValue({ results: [FIXTURE_PAGE] })
+    mockQuery.mockResolvedValue({ results: [FIXTURE_PAGE], has_more: false, next_cursor: null })
     const order = await getOrderByToken('token-abc-123')
     expect(mockQuery).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -185,7 +187,7 @@ describe('getOrderByToken', () => {
   })
 
   it('결과가 없으면 null을 반환한다', async () => {
-    mockQuery.mockResolvedValue({ results: [] })
+    mockQuery.mockResolvedValue({ results: [], has_more: false, next_cursor: null })
     const order = await getOrderByToken('nonexistent')
     expect(order).toBeNull()
   })

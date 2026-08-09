@@ -15,8 +15,14 @@ const notion = new Client({ auth: token })
 
 try {
   const database = await notion.databases.retrieve({ database_id: databaseId })
+  const dataSourceRef = database.data_sources?.[0]
+  if (!dataSourceRef) {
+    console.error('데이터베이스에서 데이터 소스를 찾을 수 없습니다.')
+    process.exit(1)
+  }
+  const dataSource = await notion.dataSources.retrieve({ data_source_id: dataSourceRef.id })
   console.log('연결 성공. 데이터베이스 제목:', database.title[0]?.plain_text ?? '(제목 없음)')
-  console.log('속성 목록:', Object.keys(database.properties).join(', '))
+  console.log('속성 목록:', Object.keys(dataSource.properties).join(', '))
 } catch (error) {
   console.error('노션 연결 실패:', error.message)
   process.exit(1)
