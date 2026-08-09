@@ -4,11 +4,13 @@ const mockQuery = vi.fn()
 const mockCreate = vi.fn()
 const mockUpdate = vi.fn()
 const mockRetrieve = vi.fn()
+const mockDatabaseRetrieve = vi.fn()
 
 vi.mock('@notionhq/client', () => {
   class MockClient {
     constructor(config: any) {}
-    databases = { query: mockQuery, retrieve: vi.fn() }
+    databases = { retrieve: mockDatabaseRetrieve }
+    dataSources = { query: mockQuery }
     pages = { create: mockCreate, update: mockUpdate, retrieve: mockRetrieve }
   }
   return {
@@ -115,6 +117,8 @@ beforeEach(() => {
   mockCreate.mockReset()
   mockUpdate.mockReset()
   mockRetrieve.mockReset()
+  mockDatabaseRetrieve.mockReset()
+  mockDatabaseRetrieve.mockResolvedValue({ data_sources: [{ id: 'data-source-1', name: 'Orders' }] })
   __clearNotionClient()
 })
 

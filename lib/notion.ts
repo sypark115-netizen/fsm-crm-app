@@ -86,8 +86,22 @@ function getClient(): Client {
   return notionClient
 }
 
+let cachedDataSourceId: string | null = null
+
+async function getDataSourceId(): Promise<string> {
+  if (cachedDataSourceId) return cachedDataSourceId
+  const database = await getClient().databases.retrieve({ database_id: databaseId() })
+  const dataSource = (database as { data_sources?: { id: string }[] }).data_sources?.[0]
+  if (!dataSource) {
+    throw new Error('노션 데이터베이스에서 데이터 소스를 찾을 수 없습니다.')
+  }
+  cachedDataSourceId = dataSource.id
+  return cachedDataSourceId
+}
+
 export function __clearNotionClient() {
   notionClient = null
+  cachedDataSourceId = null
 }
 
 function databaseId(): string {
@@ -95,13 +109,15 @@ function databaseId(): string {
 }
 
 export async function listOrders(): Promise<Order[]> {
-  const response = await getClient().databases.query({ database_id: databaseId() })
+  const dataSourceId = await getDataSourceId()
+  const response = await getClient().dataSources.query({ data_source_id: dataSourceId })
   return (response.results as unknown as NotionPage[]).map(mapPageToOrder)
 }
 
 export async function getOrderByToken(token: string): Promise<Order | null> {
-  const response = await getClient().databases.query({
-    database_id: databaseId(),
+  const dataSourceId = await getDataSourceId()
+  const response = await getClient().dataSources.query({
+    data_source_id: dataSourceId,
     filter: { property: PROPS.trackingToken, rich_text: { equals: token } },
   })
   const page = response.results[0] as unknown as NotionPage | undefined
@@ -148,7 +164,8 @@ export async function updateOrderFields(
   id: string,
   fields: Partial<Pick<Order, 'memo' | 'visitDate' | 'technician'>>
 ): Promise<Order> {
-  const properties: Record<string, unknown> = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const properties: Record<string, any> = {}
   if (fields.memo !== undefined) {
     properties[PROPS.memo] = { rich_text: [{ text: { content: fields.memo } }] }
   }
