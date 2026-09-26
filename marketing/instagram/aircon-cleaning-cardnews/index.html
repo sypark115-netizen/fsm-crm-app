@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교실 에어컨 카드뉴스</title>
+<style>
+@font-face{font-family:"Pretendard";font-weight:400;src:url(fonts/Pretendard-Regular.woff2) format("woff2")}
+@font-face{font-family:"Pretendard";font-weight:500;src:url(fonts/Pretendard-Medium.woff2) format("woff2")}
+@font-face{font-family:"Pretendard";font-weight:700;src:url(fonts/Pretendard-Bold.woff2) format("woff2")}
+@font-face{font-family:"Pretendard";font-weight:800;src:url(fonts/Pretendard-ExtraBold.woff2) format("woff2")}
+@font-face{font-family:"Pretendard";font-weight:900;src:url(fonts/Pretendard-Black.woff2) format("woff2")}
+
+:root{
+  --navy:#12203A;
+  --navy-2:#1C2E4F;
+  --paper:#F5F2EB;
+  --paper-2:#EAE5DA;
+  --mint:#2BC4A8;
+  --mint-soft:#D5F3EC;
+  --coral:#FF5B3A;
+  --coral-soft:#FFE3DB;
+  --ink:#12203A;
+  --ink-2:#4A566B;
+  --line:#D9D3C6;
+  --page-bg:#E4E0D8;
+  --page-ink:#12203A;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--page-bg:#0B1322;--page-ink:#E8ECF2}
+}
+:root[data-theme="dark"]{--page-bg:#0B1322;--page-ink:#E8ECF2}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--page-bg);color:var(--page-ink);
+  font-family:"Pretendard",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;word-break:keep-all;
+}
+
+/* ---------- 갤러리(화면 보기용) ---------- */
+.intro{max-width:1100px;margin:0 auto;padding:40px 16px 8px}
+.intro h1{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.intro p{font-size:14px;opacity:.7;margin-top:6px;line-height:1.6}
+.deck{
+  display:flex;flex-direction:column;align-items:center;gap:28px;
+  padding:24px 16px 64px;
+}
+.frame{
+  width:min(540px,100%);aspect-ratio:1080/1350;position:relative;
+  border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.18);
+}
+.frame .card{transform-origin:0 0;transform:scale(var(--s,.5))}
+.frame-label{font-size:13px;opacity:.6;margin-top:-18px}
+
+/* ---------- 카드 공통 (1080 × 1350, 인스타 4:5) ---------- */
+.card{
+  width:1080px;height:1350px;position:absolute;inset:0;overflow:hidden;
+  background:var(--paper);color:var(--ink);letter-spacing:-.03em;
+}
+.el{position:absolute}
+.brand{
+  left:80px;bottom:64px;font-size:26px;font-weight:700;color:var(--ink-2);
+  display:flex;align-items:center;gap:12px;
+}
+.brand .dot{width:14px;height:14px;border-radius:50%;background:var(--mint)}
+.pager{right:80px;bottom:64px;font-size:26px;font-weight:700;color:var(--ink-2)}
+.tag{
+  left:80px;top:88px;display:inline-flex;align-items:center;gap:10px;
+  font-size:28px;font-weight:800;color:var(--navy);
+  background:var(--mint-soft);border-radius:999px;padding:12px 26px;
+}
+.headline{left:80px;right:80px;top:170px;font-size:78px;line-height:1.22;font-weight:900}
+.hl{background:linear-gradient(transparent 58%, var(--mint) 58%, var(--mint) 92%, transparent 92%)}
+.hl-coral{color:var(--coral)}
+
+/* 사진 자리(캔바에서 교체) */
+.photo{
+  border:4px dashed #B9B1A0;border-radius:28px;background:var(--paper-2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  color:#8A8272;font-size:28px;font-weight:700;text-align:center;
+}
+.photo small{font-size:22px;font-weight:500}
+
+/* ---------- 1. 표지 ---------- */
+.cover{background:var(--navy);color:#fff}
+.cover .kicker{
+  left:80px;top:96px;font-size:30px;font-weight:700;color:var(--mint);
+  border:3px solid var(--mint);border-radius:999px;padding:12px 28px;
+}
+.cover .title{left:80px;right:80px;top:210px;font-size:112px;line-height:1.14;font-weight:900;letter-spacing:-.045em}
+.cover .title .m{color:var(--mint)}
+.cover .sub{left:80px;right:120px;top:770px;font-size:38px;line-height:1.5;font-weight:500;color:#C9D3E3}
+.cover .photo{left:80px;right:80px;top:935px;height:245px;background:var(--navy-2);border-color:#3A4D70;color:#7F92B3}
+.cover .brand{color:#9FB0CC}
+.cover .swipe{right:80px;bottom:60px;font-size:28px;font-weight:800;color:var(--mint)}
+
+/* ---------- 2. 본문 : 오염 위치 ---------- */
+.parts{left:80px;right:80px;top:500px;display:flex;flex-direction:column;gap:22px}
+.part{
+  display:flex;align-items:center;gap:30px;background:#fff;border-radius:28px;
+  padding:30px 36px;box-shadow:0 2px 0 var(--line);
+}
+.part .n{
+  flex:none;width:84px;height:84px;border-radius:22px;background:var(--navy);color:var(--mint);
+  display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:900;
+}
+.part b{display:block;font-size:40px;font-weight:800}
+.part span{display:block;font-size:28px;font-weight:500;color:var(--ink-2);margin-top:6px}
+.part.warn .n{background:var(--coral);color:#fff}
+
+/* ---------- 3. 본문 : 현장 근거 ---------- */
+.stat{left:80px;top:430px;display:flex;align-items:flex-end;gap:18px}
+.stat .num{font-size:220px;font-weight:900;line-height:.85;color:var(--navy);letter-spacing:-.06em}
+.stat .unit{font-size:56px;font-weight:800;padding-bottom:14px}
+.stat-cap{left:80px;top:650px;font-size:32px;font-weight:600;color:var(--ink-2)}
+.findings{left:80px;right:80px;top:730px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.find{background:#fff;border-radius:26px;overflow:hidden;box-shadow:0 2px 0 var(--line)}
+.find .photo{position:static;height:250px;border-radius:0;border-width:0 0 4px 0;font-size:22px}
+.find .txt{padding:22px 24px 26px}
+.find b{display:block;font-size:32px;font-weight:800;color:var(--coral)}
+.find span{display:block;font-size:24px;font-weight:500;color:var(--ink-2);margin-top:6px;line-height:1.4}
+
+/* ---------- 4. 본문 : 체크리스트 ---------- */
+.checklist{left:80px;right:80px;top:450px;display:flex;flex-direction:column;gap:22px}
+.check{
+  display:flex;gap:28px;align-items:flex-start;background:#fff;border-radius:28px;
+  padding:34px 38px;box-shadow:0 2px 0 var(--line);
+}
+.check .box{
+  flex:none;width:62px;height:62px;border-radius:16px;border:5px solid var(--navy);
+  display:flex;align-items:center;justify-content:center;margin-top:2px;
+}
+.check .box::after{content:"";width:28px;height:15px;border-left:7px solid var(--mint);border-bottom:7px solid var(--mint);transform:rotate(-45deg) translate(2px,-3px)}
+.check b{display:block;font-size:42px;font-weight:800}
+.check span{display:block;font-size:28px;font-weight:500;color:var(--ink-2);margin-top:8px}
+.verdict{
+  left:80px;right:80px;top:1010px;background:var(--navy);color:#fff;border-radius:28px;
+  padding:28px 38px;font-size:32px;font-weight:700;line-height:1.45;
+}
+.verdict em{font-style:normal;color:var(--mint)}
+.save-hint{right:80px;top:96px;font-size:26px;font-weight:800;color:var(--coral)}
+
+/* ---------- 5. CTA ---------- */
+.cta{background:var(--mint)}
+.cta .headline{top:150px;font-size:92px;line-height:1.18;color:var(--navy)}
+.cta .desc{left:80px;right:80px;top:560px;font-size:36px;line-height:1.55;font-weight:600;color:#0F3B35}
+.cta .share{
+  left:80px;right:80px;top:760px;background:var(--navy);color:#fff;border-radius:32px;
+  padding:44px 48px;
+}
+.cta .share .q{font-size:30px;font-weight:700;color:var(--mint)}
+.cta .share .a{font-size:52px;font-weight:900;margin-top:10px;line-height:1.25}
+.actions{left:80px;right:80px;top:1060px;display:flex;gap:18px}
+.act{
+  flex:1;background:#fff;border-radius:24px;padding:26px 0;text-align:center;
+  font-size:30px;font-weight:800;color:var(--navy);
+}
+.cta .brand{color:var(--navy)}
+.cta .brand .dot{background:var(--navy)}
+.cta .pager{color:var(--navy)}
+
+/* ---------- 인쇄/PDF (카드 1장 = 1페이지) ---------- */
+@page{size:1080px 1350px;margin:0}
+@media print{
+  body{background:none}
+  .intro,.frame-label{display:none}
+  .deck{display:block;padding:0}
+  .frame{width:1080px;height:1350px;aspect-ratio:auto;border-radius:0;box-shadow:none;break-after:page}
+  .frame .card{transform:none}
+  #card-5{break-after:auto}
+}
+</style>
+</head>
+<body>
+
+<header class="intro">
+  <h1>교실 에어컨 세척 · 인스타그램 카드뉴스 (5장)</h1>
+  <p>1080×1350(4:5) · 표지 1 + 본문 3 + CTA 1 · 점선 박스는 현장 사진 자리입니다.</p>
+</header>
+
+<main class="deck">
+
+  <!-- 1. 표지 -->
+  <div class="frame" id="card-1"><section class="card cover">
+    <div class="el kicker">학교 시설 담당자 필독</div>
+    <h2 class="el title">교실 에어컨,<br>켜는 순간<br><span class="m">1년 치 먼지</span>부터<br>나옵니다</h2>
+    <p class="el sub">필터만 닦았다면, 절반만 청소한 겁니다.<br>방학 전 꼭 봐야 할 3가지를 정리했어요.</p>
+    <div class="el photo">사진 넣기<small>세척 전 오염된 송풍팬 · 열교환기 클로즈업</small></div>
+    <div class="el brand"><i class="dot"></i>아삽24 · 에어컨레벨업</div>
+    <div class="el swipe">넘겨보기 →</div>
+  </section></div>
+  <div class="frame-label">1 / 5 · 표지</div>
+
+  <!-- 2. 본문 1: 문제 -->
+  <div class="frame" id="card-2"><section class="card">
+    <div class="el tag">01 · 진짜 오염 위치</div>
+    <h2 class="el headline">필터만 닦으면 끝?<br><span class="hl">진짜 오염은</span><br>안쪽에 있습니다</h2>
+    <div class="el parts">
+      <div class="part"><div class="n">1</div><div><b>필터</b><span>눈에 보이는 먼지 — 담당자가 닦는 부분</span></div></div>
+      <div class="part warn"><div class="n">2</div><div><b>열교환기(냉각핀)</b><span>습기 + 먼지가 엉겨 곰팡이 번식</span></div></div>
+      <div class="part warn"><div class="n">3</div><div><b>송풍팬</b><span>검은 점 = 곰팡이, 바람과 함께 교실로</span></div></div>
+      <div class="part warn"><div class="n">4</div><div><b>물받이 · 배수관</b><span>막히면 악취 · 누수 · 천장 얼룩</span></div></div>
+    </div>
+    <div class="el brand"><i class="dot"></i>아삽24 · 에어컨레벨업</div>
+    <div class="el pager">2 / 5</div>
+  </section></div>
+  <div class="frame-label">2 / 5 · 본문 — 문제</div>
+
+  <!-- 3. 본문 2: 현장 근거 -->
+  <div class="frame" id="card-3"><section class="card">
+    <div class="el tag">02 · 현장에서 본 것</div>
+    <h2 class="el headline">직접 열어보면<br><span class="hl-coral">생각보다 심각</span>합니다</h2>
+    <div class="el stat"><span class="num">61</span><span class="unit">개 기관</span></div>
+    <p class="el stat-cap">학교 · 유치원 · 관공서 현장에서 가장 많이 본 3가지</p>
+    <div class="el findings">
+      <div class="find"><div class="el photo">사진<small>필터 손상</small></div><div class="txt"><b>노후 필터 손상</b><span>찢어진 틈으로 먼지가 그대로 통과</span></div></div>
+      <div class="find"><div class="el photo">사진<small>송풍팬 곰팡이</small></div><div class="txt"><b>송풍팬 곰팡이</b><span>켤 때 나는 쉰내의 주범</span></div></div>
+      <div class="find"><div class="el photo">사진<small>배수 막힘</small></div><div class="txt"><b>배수 막힘</b><span>여름철 물 떨어짐 민원으로</span></div></div>
+    </div>
+    <div class="el brand"><i class="dot"></i>아삽24 · 에어컨레벨업</div>
+    <div class="el pager">3 / 5</div>
+  </section></div>
+  <div class="frame-label">3 / 5 · 본문 — 근거</div>
+
+  <!-- 4. 본문 3: 체크리스트 (저장 유도) -->
+  <div class="frame" id="card-4"><section class="card">
+    <div class="el tag">03 · 방학 전 체크리스트</div>
+    <div class="el save-hint">저장해두세요 ✓</div>
+    <h2 class="el headline">하나라도 해당되면<br><span class="hl">분해 세척</span> 시기입니다</h2>
+    <div class="el checklist">
+      <div class="check"><div class="box"></div><div><b>켜자마자 쉰내 · 곰팡이 냄새</b><span>송풍팬 · 열교환기 오염 신호</span></div></div>
+      <div class="check"><div class="box"></div><div><b>바람 나오는 곳에 검은 점</b><span>곰팡이가 이미 토출구까지 번진 상태</span></div></div>
+      <div class="check"><div class="box"></div><div><b>물 떨어짐 · 덜덜거리는 소음</b><span>배수 막힘, 팬 오염으로 인한 불균형</span></div></div>
+    </div>
+    <div class="el verdict">추천 시기 <em>여름방학 전(5~6월)</em> · <em>겨울방학</em><br>수업 공백에 맞춰야 교실 사용에 지장이 없어요.</div>
+    <div class="el brand"><i class="dot"></i>아삽24 · 에어컨레벨업</div>
+    <div class="el pager">4 / 5</div>
+  </section></div>
+  <div class="frame-label">4 / 5 · 본문 — 체크리스트</div>
+
+  <!-- 5. CTA -->
+  <div class="frame" id="card-5"><section class="card cta">
+    <h2 class="el headline">올여름 교실 공기,<br>방학 전에<br>미리 잡으세요</h2>
+    <p class="el desc">분해 세척부터 작업 사진이 담긴<br>완료 보고서까지 한 번에 챙겨드립니다.</p>
+    <div class="el share">
+      <div class="q">이 카드뉴스, 누구에게 필요할까요?</div>
+      <div class="a">행정실 · 시설 담당<br>선생님께 공유해 주세요</div>
+    </div>
+    <div class="el actions">
+      <div class="act">저장하기</div>
+      <div class="act">공유하기</div>
+      <div class="act">프로필 링크 문의</div>
+    </div>
+    <div class="el brand"><i class="dot"></i>아삽24 · 에어컨레벨업</div>
+    <div class="el pager">5 / 5</div>
+  </section></div>
+  <div class="frame-label">5 / 5 · CTA</div>
+
+</main>
+<script>
+  // 화면 폭에 맞춰 1080px 카드를 축소해서 보여줌 (원본 크기는 그대로)
+  const frames=document.querySelectorAll('.frame');
+  const fit=()=>frames.forEach(f=>f.style.setProperty('--s',f.clientWidth/1080));
+  new ResizeObserver(fit).observe(document.body);fit();
+</script>
+</body>
+</html>
