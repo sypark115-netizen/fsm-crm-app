@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Standalone marketing assets (not part of the app build).
+    "marketing/**",
   ]),
 ]);
 
