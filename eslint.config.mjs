@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Exi is a standalone app with its own toolchain.
+    "exi/**",
   ]),
 ]);
 
