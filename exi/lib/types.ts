@@ -1,24 +1,26 @@
-// Domain model for the Exi workspace. Everything here is serialisable so the
-// whole workspace can be persisted to localStorage (or swapped for a DB later).
+// Domain model shared by server and client. Everything is JSON-serialisable.
 
-export type AgentId =
-  | "exi"
-  | "planner"
-  | "researcher"
-  | "coder"
-  | "marketer"
-  | "analyst"
-  | "maki";
+export type AgentId = "exi" | "planner" | "researcher" | "coder" | "marketer" | "analyst" | "maki";
+export type SpecialistId = Exclude<AgentId, "exi" | "maki">;
 
-export type AuthorId = AgentId | "user";
+/** An agent id, or a user id ("usr_…"). */
+export type AuthorId = string;
+
+export interface User {
+  id: string;
+  username: string;
+  displayName: string;
+}
 
 export interface Channel {
   id: string;
   name: string;
   kind: "channel" | "dm";
   topic?: string;
-  /** For DMs: who the conversation is with. */
+  /** DMs: the agent on the other side. */
   peer?: AgentId;
+  /** DMs are private to their owner. */
+  ownerId?: string;
 }
 
 export interface Attachment {
@@ -26,8 +28,7 @@ export interface Attachment {
   name: string;
   size: number;
   mime: string;
-  /** Small images only — larger files keep metadata alone. */
-  dataUrl?: string;
+  url: string;
 }
 
 export interface Message {
@@ -38,21 +39,22 @@ export interface Message {
   createdAt: number;
   runId?: string;
   attachments?: Attachment[];
-  /** Messages posted by automation carry the rule that fired them. */
   automationId?: string;
+  /** True while an agent is still streaming this message. */
+  streaming?: boolean;
 }
 
-export type StepStatus = "queued" | "working" | "done";
+export type StepStatus = "queued" | "working" | "done" | "failed";
 
 export interface RunStep {
   id: string;
-  agent: AgentId;
+  agent: SpecialistId;
   title: string;
   detail: string;
-  output: string;
   status: StepStatus;
   startedAt?: number;
   finishedAt?: number;
+  messageId?: string;
 }
 
 export type RunStatus = "planning" | "running" | "done" | "failed";
@@ -62,21 +64,14 @@ export interface AgentRun {
   channelId: string;
   command: string;
   status: RunStatus;
-  source?: "claude" | "mock";
+  source: "claude" | "mock";
   summary?: string;
   steps: RunStep[];
   startedAt: number;
   finishedAt?: number;
   error?: string;
   automationId?: string;
-}
-
-/** What a planner (mock or Claude) returns: the plan plus each step's result. */
-export interface ExiPlan {
-  summary: string;
-  steps: { agent: Exclude<AgentId, "exi" | "maki">; title: string; detail: string; output: string }[];
-  finalReport: string;
-  source: "claude" | "mock";
+  requestedBy?: string;
 }
 
 export type AutomationTrigger =
@@ -91,6 +86,7 @@ export interface Automation {
   command: string;
   enabled: boolean;
   createdAt: number;
+  createdBy?: string;
   lastRunAt?: number;
   runCount: number;
 }
@@ -105,17 +101,39 @@ export interface FeedbackItem {
   id: string;
   text: string;
   createdAt: number;
-  status: "received" | "triaging" | "building" | "shipped";
-  version?: string;
+  createdBy?: string;
+  status: "received" | "triaging" | "filed" | "failed";
+  title?: string;
+  kind?: "bug" | "enhancement";
+  priority?: "P0" | "P1" | "P2" | "P3";
+  issueUrl?: string;
   log: FeedbackLogEntry[];
 }
 
-export interface WorkspaceState {
+export interface ServerStatus {
+  planner: "claude" | "mock";
+  github: boolean;
+  model?: string;
+}
+
+/** Everything the client needs on load. */
+export interface Bootstrap {
+  me: User;
+  users: User[];
   channels: Channel[];
   messages: Message[];
   runs: AgentRun[];
   automations: Automation[];
   feedback: FeedbackItem[];
-  activeChannelId: string;
-  appVersion: string;
+  status: ServerStatus;
 }
+
+/** Real-time events pushed over SSE. */
+export type WorkspaceEvent =
+  | { type: "message.upsert"; message: Message }
+  | { type: "run.upsert"; run: AgentRun }
+  | { type: "channel.create"; channel: Channel }
+  | { type: "automation.upsert"; automation: Automation }
+  | { type: "automation.delete"; id: string }
+  | { type: "feedback.upsert"; item: FeedbackItem }
+  | { type: "user.join"; user: User };

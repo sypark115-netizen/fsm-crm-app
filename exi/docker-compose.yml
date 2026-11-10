@@ -1,0 +1,14 @@
+services:
+  exi:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      TZ: ${TZ:-Asia/Seoul} # Maki schedules use this time zone
+    volumes:
+      - exi-data:/data # SQLite DB + uploaded files
+
+volumes:
+  exi-data:

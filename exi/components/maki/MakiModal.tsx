@@ -2,9 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Play, Radio, Trash2, X, Zap } from "lucide-react";
-import { uid } from "@/lib/ids";
 import { describeCron, isValidCron, nextRun, naturalToCron } from "@/lib/maki/cron";
-import type { Automation, Channel } from "@/lib/types";
+import type { Automation, AutomationTrigger, Channel } from "@/lib/types";
+
+export interface NewAutomation {
+  name: string;
+  trigger: AutomationTrigger;
+  channelId: string;
+  command: string;
+}
 
 const PRESETS = [
   { label: "Daily 9 AM", cron: "0 9 * * *" },
@@ -19,7 +25,7 @@ interface Props {
   automations: Automation[];
   defaultChannelId: string;
   onClose: () => void;
-  onCreate: (a: Automation) => void;
+  onCreate: (a: NewAutomation) => Promise<void>;
   onToggle: (id: string, enabled: boolean) => void;
   onDelete: (id: string) => void;
   onRunNow: (a: Automation) => void;
@@ -33,6 +39,8 @@ export function MakiModal({ channels, automations, defaultChannelId, onClose, on
   const [keyword, setKeyword] = useState("");
   const [channelId, setChannelId] = useState(defaultChannelId);
   const [command, setCommand] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -61,25 +69,29 @@ export function MakiModal({ channels, automations, defaultChannelId, onClose, on
     }
   };
 
-  const create = () => {
-    if (!valid) return;
-    onCreate({
-      id: uid("auto"),
-      name: name.trim(),
-      trigger:
-        kind === "schedule"
-          ? { type: "schedule", cron: cron.trim() }
-          : { type: "event", event: "message_contains", keyword: keyword.trim(), channelId: undefined },
-      channelId,
-      command: command.trim(),
-      enabled: true,
-      createdAt: Date.now(),
-      runCount: 0,
-    });
-    setName("");
-    setCommand("");
-    setKeyword("");
-    setQuick("");
+  const create = async () => {
+    if (!valid || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onCreate({
+        name: name.trim(),
+        trigger:
+          kind === "schedule"
+            ? { type: "schedule", cron: cron.trim() }
+            : { type: "event", event: "message_contains", keyword: keyword.trim() },
+        channelId,
+        command: command.trim(),
+      });
+      setName("");
+      setCommand("");
+      setKeyword("");
+      setQuick("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't create automation");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const channelName = (id: string) => channels.find((c) => c.id === id)?.name ?? "unknown";
@@ -184,9 +196,10 @@ export function MakiModal({ channels, automations, defaultChannelId, onClose, on
               />
             </Field>
 
+            {error && <p className="text-xs text-red-600">{error}</p>}
             <button
-              disabled={!valid}
-              onClick={create}
+              disabled={!valid || saving}
+              onClick={() => void create()}
               className="w-full rounded-md bg-orange-500 py-2 text-sm font-semibold text-white disabled:bg-slate-200 disabled:text-slate-400"
             >
               Create automation
@@ -249,8 +262,8 @@ export function MakiModal({ channels, automations, defaultChannelId, onClose, on
               {automations.length === 0 && <li className="text-sm text-slate-500">No rules yet.</li>}
             </ul>
             <p className="mt-4 text-[11px] text-slate-400">
-              Prototype note: schedules are evaluated in the browser every 15s while the app is open. Production would move
-              this to a server-side worker (e.g. a cron job or queue).
+              Schedules run on the server every 30s in the server&apos;s time zone (set <code>TZ</code>), even when nobody
+              has the app open. Tip: you can also DM Maki in plain words.
             </p>
           </section>
         </div>

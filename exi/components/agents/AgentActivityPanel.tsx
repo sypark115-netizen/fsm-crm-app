@@ -10,6 +10,7 @@ import { Avatar } from "./Avatar";
 function StepIcon({ status }: { status: RunStep["status"] }) {
   if (status === "done") return <CheckCircle2 size={16} className="text-emerald-600" />;
   if (status === "working") return <Loader2 size={16} className="animate-spin text-violet-600" />;
+  if (status === "failed") return <XCircle size={16} className="text-red-500" />;
   return <CircleDashed size={16} className="text-slate-300" />;
 }
 
@@ -28,7 +29,7 @@ function RunCard({ run, selected, onSelect }: { run: AgentRun; selected: boolean
   const now = useNow(live);
   const done = run.steps.filter((s) => s.status === "done").length;
   const pct = run.steps.length ? Math.round((done / run.steps.length) * 100) : run.status === "done" ? 100 : 8;
-  const elapsed = (((run.finishedAt ?? now) - run.startedAt) / 1000).toFixed(1);
+  const elapsed = Math.max(0, ((run.finishedAt ?? now) - run.startedAt) / 1000).toFixed(1);
 
   return (
     <div
@@ -52,7 +53,7 @@ function RunCard({ run, selected, onSelect }: { run: AgentRun; selected: boolean
           >
             {run.status}
           </span>
-          {run.source && <span>{run.source === "claude" ? "Claude" : "mock planner"}</span>}
+          <span>{run.source === "claude" ? "Claude" : "demo mode"}</span>
           <span className="ml-auto tabular-nums">{elapsed}s</span>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">

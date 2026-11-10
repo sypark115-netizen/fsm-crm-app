@@ -1,11 +1,11 @@
-import { FileText, Globe, ImageIcon } from "lucide-react";
+import { Download, FileText, Globe } from "lucide-react";
 import { formatBytes } from "@/lib/ids";
 import type { Attachment } from "@/lib/types";
 
-const URL_RE = /https?:\/\/[^\s<>()]+[^\s<>().,!?;:'"]/g;
+const URL_RE = /https?:\/\/[^\s<>()\[\]]+[^\s<>()\[\].,!?;:'"]/g;
 
 export function extractUrls(text: string): string[] {
-  return Array.from(new Set(text.match(URL_RE) ?? [])).slice(0, 3);
+  return Array.from(new Set(text.match(URL_RE) ?? [])).slice(0, 2);
 }
 
 const KNOWN: Record<string, { name: string; tint: string }> = {
@@ -17,7 +17,10 @@ const KNOWN: Record<string, { name: string; tint: string }> = {
   "linear.app": { name: "Linear", tint: "bg-indigo-600" },
 };
 
-/** Client-side unfurl. A production build would fetch OpenGraph tags server-side. */
+/**
+ * Link card built from the URL itself. We deliberately don't fetch remote pages
+ * server-side (SSRF risk); add an allow-listed unfurler if you need OG data.
+ */
 export function LinkPreview({ url }: { url: string }) {
   let host = url;
   let path = "";
@@ -49,24 +52,29 @@ export function LinkPreview({ url }: { url: string }) {
 }
 
 export function AttachmentCard({ file }: { file: Attachment }) {
-  if (file.dataUrl && file.mime.startsWith("image/")) {
+  if (/^image\/(png|jpeg|gif|webp)$/.test(file.mime)) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
-      <img src={file.dataUrl} alt={file.name} className="mt-2 max-h-60 max-w-xs rounded-lg border border-slate-200 object-cover" />
+      <a href={file.url} target="_blank" rel="noreferrer" className="mt-2 block w-fit">
+        {/* eslint-disable-next-line @next/next/no-img-element -- authenticated upload, not optimisable */}
+        <img src={file.url} alt={file.name} className="max-h-64 max-w-xs rounded-lg border border-slate-200 object-cover" />
+      </a>
     );
   }
-  const Icon = file.mime.startsWith("image/") ? ImageIcon : FileText;
   return (
-    <div className="mt-2 flex w-72 items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5">
+    <a
+      href={file.url}
+      className="mt-2 flex w-72 items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5 hover:bg-slate-50"
+    >
       <span className="flex h-9 w-9 items-center justify-center rounded-md bg-violet-100 text-violet-700">
-        <Icon size={18} />
+        <FileText size={18} />
       </span>
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{file.name}</span>
         <span className="block text-xs text-slate-500">
           {formatBytes(file.size)} · {file.mime || "file"}
         </span>
       </span>
-    </div>
+      <Download size={16} className="text-slate-400" />
+    </a>
   );
 }

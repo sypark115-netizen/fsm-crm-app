@@ -3,64 +3,71 @@
 import { useEffect, useRef } from "react";
 import { Zap } from "lucide-react";
 import { Avatar } from "@/components/agents/Avatar";
-import { AGENTS } from "@/lib/agents";
+import { profileOf } from "@/lib/agents";
 import { formatDay, formatTime } from "@/lib/ids";
-import type { AgentRun, Message } from "@/lib/types";
+import type { AgentRun, Message, User } from "@/lib/types";
 import { Markdown } from "./Markdown";
 import { AttachmentCard, LinkPreview, extractUrls } from "./Previews";
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
-function TypingIndicator({ run }: { run: AgentRun }) {
-  const working = run.steps.find((s) => s.status === "working");
-  const who = working ? AGENTS[working.agent] : AGENTS.exi;
-  const label = run.status === "planning" ? "Exi is planning" : `${who.name} is working on “${working?.title ?? "…"}”`;
+function Dots() {
   return (
-    <div className="flex items-center gap-3 px-5 py-2 text-sm text-slate-500">
-      <Avatar author={working?.agent ?? "exi"} size="sm" />
-      <span>{label}</span>
-      <span className="flex gap-0.5">
-        <span className="typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" />
-        <span className="typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" />
-        <span className="typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" />
-      </span>
-    </div>
+    <span className="inline-flex gap-0.5 align-middle">
+      <span className="typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" />
+      <span className="typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" />
+      <span className="typing-dot h-1.5 w-1.5 rounded-full bg-slate-400" />
+    </span>
   );
 }
 
 export function MessageList({
   messages,
-  activeRun,
+  users,
+  planningRun,
   onSelectRun,
 }: {
   messages: Message[];
-  activeRun?: AgentRun;
+  users: Record<string, User>;
+  planningRun?: AgentRun;
   onSelectRun: (runId: string) => void;
 }) {
-  const bottom = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const pinned = useRef(true);
+  const last = messages.at(-1);
+
+  // Follow new content only if the reader is already at the bottom.
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, activeRun?.status, activeRun?.steps]);
+    const el = scroller.current;
+    if (el && pinned.current) el.scrollTop = el.scrollHeight;
+  }, [messages.length, last?.text, planningRun?.status]);
 
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center p-8 text-center text-slate-500">
         <div>
           <p className="text-lg font-semibold text-slate-700">This is the very beginning of the conversation.</p>
-          <p className="mt-1 text-sm">Type a request below — Exi will plan it and bring in the right agents.</p>
+          <p className="mt-1 text-sm">Mention <strong>@Exi</strong> with a request — Exi will plan it and bring in the right agents.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto py-4">
+    <div
+      ref={scroller}
+      className="flex-1 overflow-y-auto py-4"
+      onScroll={(e) => {
+        const el = e.currentTarget;
+        pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      }}
+    >
       {messages.map((m, i) => {
         const prev = messages[i - 1];
         const newDay = !prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString();
         const grouped = !newDay && prev && prev.author === m.author && m.createdAt - prev.createdAt < GROUP_WINDOW_MS;
-        const author = AGENTS[m.author];
-        const urls = extractUrls(m.text);
+        const p = profileOf(m.author, users);
+        const urls = m.streaming ? [] : extractUrls(m.text);
         return (
           <div key={m.id}>
             {newDay && (
@@ -76,14 +83,14 @@ export function MessageList({
                 {grouped ? (
                   <span className="hidden pt-1 text-[10px] text-slate-400 group-hover:block">{formatTime(m.createdAt)}</span>
                 ) : (
-                  <Avatar author={m.author} />
+                  <Avatar author={m.author} users={users} />
                 )}
               </div>
               <div className="min-w-0 flex-1">
                 {!grouped && (
                   <div className="flex items-baseline gap-2">
-                    <span className="font-bold text-slate-900">{author.name}</span>
-                    {m.author !== "user" && (
+                    <span className="font-bold text-slate-900">{p.name}</span>
+                    {p.isAgent && (
                       <span className="rounded bg-slate-100 px-1 text-[10px] font-semibold tracking-wide text-slate-500 uppercase">
                         Agent
                       </span>
@@ -92,7 +99,8 @@ export function MessageList({
                     {m.automationId && <Zap size={12} className="text-orange-500" aria-label="Automation" />}
                   </div>
                 )}
-                <Markdown text={m.text} />
+                {m.text ? <Markdown text={m.text} /> : m.streaming ? <div className="py-1"><Dots /></div> : null}
+                {m.streaming && m.text && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-violet-500 align-middle" />}
                 {m.attachments?.map((f) => <AttachmentCard key={f.id} file={f} />)}
                 {urls.map((u) => <LinkPreview key={u} url={u} />)}
                 {m.runId && m.author === "exi" && (
@@ -108,8 +116,13 @@ export function MessageList({
           </div>
         );
       })}
-      {activeRun && (activeRun.status === "planning" || activeRun.status === "running") && <TypingIndicator run={activeRun} />}
-      <div ref={bottom} />
+      {planningRun && (
+        <div className="flex items-center gap-3 px-5 py-2 text-sm text-slate-500">
+          <Avatar author="exi" size="sm" />
+          <span>Exi is planning who should work on this</span>
+          <Dots />
+        </div>
+      )}
     </div>
   );
 }

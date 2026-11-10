@@ -1,107 +1,125 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Hash, Menu, RotateCcw, Zap } from "lucide-react";
+import { Activity, Hash, Loader2, Menu, Zap } from "lucide-react";
 import { AgentActivityPanel } from "@/components/agents/AgentActivityPanel";
 import { Avatar } from "@/components/agents/Avatar";
 import { Composer } from "@/components/chat/Composer";
 import { MessageList } from "@/components/chat/MessageList";
 import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
-import { MakiModal } from "@/components/maki/MakiModal";
+import { MakiModal, type NewAutomation } from "@/components/maki/MakiModal";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { AGENTS } from "@/lib/agents";
-import { uid } from "@/lib/ids";
-import { useOrchestrator } from "@/lib/orchestrator/useOrchestrator";
-import { useWorkspace } from "@/lib/store";
-import type { Attachment } from "@/lib/types";
+import { api } from "@/lib/client/api";
+import { useWorkspace } from "@/lib/client/useWorkspace";
+import type { Automation } from "@/lib/types";
 
 export function Workspace() {
-  const { state, dispatch, stateRef, hydrated } = useWorkspace();
-  const { startRun, runAutomation, onUserMessage } = useOrchestrator(stateRef, dispatch, hydrated);
-
+  const { state, select, connection, error, reload } = useWorkspace();
   const [panelOpen, setPanelOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [makiOpen, setMakiOpen] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string>();
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  // Show the activity panel by default on wide screens only (it's an overlay on mobile).
+  // Activity panel open by default on wide screens only (it's an overlay on mobile).
   useEffect(() => {
     if (window.matchMedia("(min-width: 1024px)").matches) setPanelOpen(true);
   }, []);
 
-  const channel = state.channels.find((c) => c.id === state.activeChannelId) ?? state.channels[0];
+  const channel = state.channels.find((c) => c.id === state.activeChannelId) ?? null;
   const messages = useMemo(
-    () => state.messages.filter((m) => m.channelId === channel.id),
-    [state.messages, channel.id],
+    () => (channel ? state.messages.filter((m) => m.channelId === channel.id) : []),
+    [state.messages, channel],
   );
-  const channelRuns = useMemo(() => state.runs.filter((r) => r.channelId === channel.id), [state.runs, channel.id]);
-  const activeRun = [...channelRuns].reverse().find((r) => r.status === "planning" || r.status === "running");
+  const channelRuns = useMemo(
+    () => (channel ? state.runs.filter((r) => r.channelId === channel.id) : []),
+    [state.runs, channel],
+  );
   const busyChannels = useMemo(
     () => new Set(state.runs.filter((r) => r.status === "planning" || r.status === "running").map((r) => r.channelId)),
     [state.runs],
   );
-  // Default the panel to the newest run in this channel.
-  const shownRunId = selectedRunId && channelRuns.some((r) => r.id === selectedRunId)
-    ? selectedRunId
-    : channelRuns.at(-1)?.id;
+  const planningRun = channelRuns.findLast((r) => r.status === "planning");
+  const shownRunId =
+    selectedRunId && channelRuns.some((r) => r.id === selectedRunId) ? selectedRunId : channelRuns.at(-1)?.id;
 
-  // Exi answers every message in channels and in its own DM; other DMs are with
-  // a specialist, who still routes through Exi so the orchestration stays visible.
-  const handleSend = (text: string, attachments: Attachment[]) => {
-    dispatch({
-      type: "addMessage",
-      message: {
-        id: uid("m"),
-        channelId: channel.id,
-        author: "user",
-        text,
-        createdAt: Date.now(),
-        attachments: attachments.length ? attachments : undefined,
-      },
-    });
-    if (onUserMessage(channel.id, text)) return; // a Maki rule already handed this to Exi
-    const command = text || `Review the attached file(s): ${attachments.map((a) => a.name).join(", ")}`;
-    const peerHint = channel.kind === "dm" && channel.peer && channel.peer !== "exi" ? ` (asked directly to ${AGENTS[channel.peer].name})` : "";
-    void startRun(channel.id, command + peerHint);
-    setPanelOpen((open) => open || window.innerWidth >= 1024);
+  const run = async (fn: () => Promise<unknown>) => {
+    setActionError(null);
+    try {
+      await fn();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Something went wrong");
+    }
   };
 
+  if (!state.me || !channel) {
+    return (
+      <div className="flex h-full items-center justify-center text-slate-500">
+        {error ? (
+          <div className="text-center">
+            <p className="text-red-600">{error}</p>
+            <button onClick={() => void reload()} className="mt-2 rounded-md border px-3 py-1 text-sm">
+              Retry
+            </button>
+          </div>
+        ) : (
+          <Loader2 className="animate-spin" />
+        )}
+      </div>
+    );
+  }
+
   const selectChannel = (id: string) => {
-    dispatch({ type: "setActiveChannel", channelId: id });
+    select(id);
     setSelectedRunId(undefined);
     setSidebarOpen(false);
   };
 
+  const sidebarProps = {
+    me: state.me,
+    users: state.users,
+    channels: state.channels,
+    activeChannelId: state.activeChannelId,
+    activeAutomations: state.automations.filter((a) => a.enabled).length,
+    status: state.status,
+    connection,
+    busyChannels,
+    onSelect: selectChannel,
+    onCreateChannel: async (name: string) => {
+      const { channel: created } = await api<{ channel: { id: string } }>("/api/channels", { body: { name } });
+      selectChannel(created.id);
+    },
+    onOpenMaki: () => {
+      setMakiOpen(true);
+      setSidebarOpen(false);
+    },
+    onLogout: () =>
+      void run(async () => {
+        await api("/api/auth/logout", { body: {} });
+        window.location.href = "/login";
+      }),
+  };
+
+  const isMakiDm = channel.kind === "dm" && channel.peer === "maki";
+  const placeholder = isMakiDm
+    ? "Tell Maki what to run and when — e.g. every weekday at 9am summarize AI agent news"
+    : channel.kind === "dm"
+      ? `Message ${channel.name}`
+      : `Message #${channel.name} — mention @Exi to delegate to the agents`;
+
   return (
     <div className="flex h-full">
-      {/* Sidebar: static on md+, drawer on mobile */}
       <div className="hidden md:block">
-        <Sidebar
-          state={state}
-          busyChannels={busyChannels}
-          onSelect={selectChannel}
-          onCreateChannel={(name) => dispatch({ type: "addChannel", channel: { id: uid("ch"), name, kind: "channel" } })}
-          onOpenMaki={() => setMakiOpen(true)}
-        />
+        <Sidebar {...sidebarProps} />
       </div>
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden">
-          <Sidebar
-            state={state}
-            busyChannels={busyChannels}
-            onSelect={selectChannel}
-            onCreateChannel={(name) => dispatch({ type: "addChannel", channel: { id: uid("ch"), name, kind: "channel" } })}
-            onOpenMaki={() => {
-              setMakiOpen(true);
-              setSidebarOpen(false);
-            }}
-            onClose={() => setSidebarOpen(false)}
-          />
+          <Sidebar {...sidebarProps} onClose={() => setSidebarOpen(false)} />
           <div className="flex-1 bg-black/40" onClick={() => setSidebarOpen(false)} />
         </div>
       )}
 
-      {/* Chat */}
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 px-4">
           <button className="md:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
@@ -109,10 +127,9 @@ export function Workspace() {
           </button>
           {channel.kind === "dm" && channel.peer ? <Avatar author={channel.peer} size="sm" /> : <Hash size={18} className="text-slate-500" />}
           <h1 className="font-bold">{channel.name}</h1>
-          {channel.topic && <span className="hidden truncate text-sm text-slate-500 sm:inline">· {channel.topic}</span>}
-          {channel.kind === "dm" && channel.peer && (
-            <span className="hidden text-sm text-slate-500 sm:inline">· {AGENTS[channel.peer].role}</span>
-          )}
+          <span className="hidden truncate text-sm text-slate-500 sm:inline">
+            {channel.topic ? `· ${channel.topic}` : channel.peer ? `· ${AGENTS[channel.peer].role}` : ""}
+          </span>
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={() => setMakiOpen(true)}
@@ -127,44 +144,37 @@ export function Workspace() {
             >
               <Activity size={15} /> <span className="hidden sm:inline">Activity</span>
             </button>
-            <button
-              onClick={() => {
-                if (window.confirm("Reset the workspace to demo data? This clears local messages and automations.")) {
-                  dispatch({ type: "reset" });
-                }
-              }}
-              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
-              title="Reset demo data"
-              aria-label="Reset demo data"
-            >
-              <RotateCcw size={15} />
-            </button>
           </div>
         </header>
 
-        {hydrated ? (
-          <MessageList
-            messages={messages}
-            activeRun={activeRun}
-            onSelectRun={(id) => {
-              setSelectedRunId(id);
-              setPanelOpen(true);
-            }}
-          />
-        ) : (
-          <div className="flex-1" />
+        {state.status?.planner === "mock" && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-xs text-amber-800">
+            Demo mode — agents return canned output. Set <code>ANTHROPIC_API_KEY</code> on the server for real work.
+          </div>
+        )}
+        {actionError && (
+          <div className="border-b border-red-200 bg-red-50 px-4 py-1.5 text-xs text-red-700">{actionError}</div>
         )}
 
+        <MessageList
+          messages={messages}
+          users={state.users}
+          planningRun={planningRun}
+          onSelectRun={(id) => {
+            setSelectedRunId(id);
+            setPanelOpen(true);
+          }}
+        />
+
         <Composer
-          disabled={!hydrated}
-          placeholder={
-            channel.kind === "dm" ? `Message ${channel.name}` : `Message #${channel.name} — Exi will coordinate the agents`
-          }
-          onSend={handleSend}
+          placeholder={placeholder}
+          disabled={connection === "connecting"}
+          onSend={async (text, attachmentIds) => {
+            await api("/api/messages", { body: { channelId: channel.id, text, attachmentIds } });
+          }}
         />
       </main>
 
-      {/* Agent activity: side panel on lg+, overlay below */}
       {panelOpen && (
         <div className="fixed inset-0 z-30 bg-white lg:static lg:z-auto">
           <AgentActivityPanel
@@ -182,18 +192,22 @@ export function Workspace() {
           automations={state.automations}
           defaultChannelId={channel.id}
           onClose={() => setMakiOpen(false)}
-          onCreate={(automation) => dispatch({ type: "addAutomation", automation })}
-          onToggle={(id, enabled) => dispatch({ type: "patchAutomation", id, patch: { enabled } })}
-          onDelete={(id) => dispatch({ type: "removeAutomation", id })}
-          onRunNow={(a) => {
-            runAutomation(a, "manual run");
-            setMakiOpen(false);
-            selectChannel(a.channelId);
+          onCreate={async (a: NewAutomation) => {
+            await api("/api/automations", { body: a });
           }}
+          onToggle={(id, enabled) => void run(() => api(`/api/automations/${id}`, { method: "PATCH", body: { enabled } }))}
+          onDelete={(id) => void run(() => api(`/api/automations/${id}`, { method: "DELETE" }))}
+          onRunNow={(a: Automation) =>
+            void run(async () => {
+              await api(`/api/automations/${a.id}/run`, { body: {} });
+              setMakiOpen(false);
+              selectChannel(a.channelId);
+            })
+          }
         />
       )}
 
-      <FeedbackWidget items={state.feedback} appVersion={state.appVersion} dispatch={dispatch} />
+      <FeedbackWidget items={state.feedback} users={state.users} githubEnabled={!!state.status?.github} />
     </div>
   );
 }

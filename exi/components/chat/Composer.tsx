@@ -1,19 +1,25 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AtSign, Bold, Code, Italic, Paperclip, SendHorizontal, X } from "lucide-react";
-import { formatBytes, uid } from "@/lib/ids";
+import { AtSign, Bold, Code, Italic, Loader2, Paperclip, SendHorizontal, X } from "lucide-react";
+import { formatBytes } from "@/lib/ids";
 import type { Attachment } from "@/lib/types";
 
-const INLINE_IMAGE_LIMIT = 200 * 1024;
+interface Pending {
+  key: string;
+  name: string;
+  size: number;
+  file?: Attachment;
+  error?: string;
+}
 
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(file);
-  });
+async function upload(file: File): Promise<Attachment> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/files", { method: "POST", body: form, credentials: "same-origin" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? `Upload failed (${res.status})`);
+  return data.file as Attachment;
 }
 
 export function Composer({
@@ -23,42 +29,55 @@ export function Composer({
 }: {
   placeholder: string;
   disabled?: boolean;
-  onSend: (text: string, attachments: Attachment[]) => void;
+  onSend: (text: string, attachmentIds: string[]) => Promise<void>;
 }) {
   const [text, setText] = useState("");
-  const [files, setFiles] = useState<Attachment[]>([]);
+  const [files, setFiles] = useState<Pending[]>([]);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const area = useRef<HTMLTextAreaElement>(null);
 
-  const send = () => {
-    const t = text.trim();
-    if ((!t && files.length === 0) || disabled) return;
-    onSend(t, files);
-    setText("");
-    setFiles([]);
-    area.current?.focus();
+  const uploading = files.some((f) => !f.file && !f.error);
+  const ready = files.filter((f) => f.file).map((f) => f.file!.id);
+  const canSend = !disabled && !sending && !uploading && (text.trim().length > 0 || ready.length > 0);
+
+  const send = async () => {
+    if (!canSend) return;
+    setSending(true);
+    setError(null);
+    try {
+      await onSend(text.trim(), ready);
+      setText("");
+      setFiles([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't send");
+    } finally {
+      setSending(false);
+      area.current?.focus();
+    }
   };
 
   const wrap = (before: string, after = before) => {
     const el = area.current;
     if (!el) return;
     const { selectionStart: s, selectionEnd: e } = el;
-    const next = text.slice(0, s) + before + text.slice(s, e) + after + text.slice(e);
-    setText(next);
+    setText(text.slice(0, s) + before + text.slice(s, e) + after + text.slice(e));
     requestAnimationFrame(() => {
       el.focus();
       el.setSelectionRange(s + before.length, e + before.length);
     });
   };
 
-  const addFiles = async (list: FileList | null) => {
+  const addFiles = (list: FileList | null) => {
     if (!list) return;
-    const next: Attachment[] = [];
-    for (const f of Array.from(list).slice(0, 5)) {
-      const dataUrl = f.type.startsWith("image/") && f.size <= INLINE_IMAGE_LIMIT ? await readAsDataUrl(f) : undefined;
-      next.push({ id: uid("file"), name: f.name, size: f.size, mime: f.type, dataUrl });
+    for (const f of Array.from(list).slice(0, 5 - files.length)) {
+      const key = `${f.name}-${f.size}-${Math.random()}`;
+      setFiles((cur) => [...cur, { key, name: f.name, size: f.size }]);
+      upload(f)
+        .then((file) => setFiles((cur) => cur.map((p) => (p.key === key ? { ...p, file } : p))))
+        .catch((err: Error) => setFiles((cur) => cur.map((p) => (p.key === key ? { ...p, error: err.message } : p))));
     }
-    setFiles((cur) => [...cur, ...next]);
   };
 
   return (
@@ -73,9 +92,14 @@ export function Composer({
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2 px-3 pt-2">
             {files.map((f) => (
-              <span key={f.id} className="flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-xs">
-                {f.name} <span className="text-slate-500">{formatBytes(f.size)}</span>
-                <button onClick={() => setFiles((cur) => cur.filter((x) => x.id !== f.id))} aria-label={`Remove ${f.name}`}>
+              <span
+                key={f.key}
+                className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs ${f.error ? "bg-red-50 text-red-700" : "bg-slate-100"}`}
+                title={f.error}
+              >
+                {!f.file && !f.error && <Loader2 size={12} className="animate-spin" />}
+                {f.name} <span className="text-slate-500">{f.error ? "failed" : formatBytes(f.size)}</span>
+                <button onClick={() => setFiles((cur) => cur.filter((x) => x.key !== f.key))} aria-label={`Remove ${f.name}`}>
                   <X size={12} />
                 </button>
               </span>
@@ -91,7 +115,7 @@ export function Composer({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
-              send();
+              void send();
             }
           }}
           className="block max-h-48 min-h-[3rem] w-full resize-none bg-transparent px-3 py-2 text-[15px] outline-none"
@@ -110,18 +134,23 @@ export function Composer({
             multiple
             hidden
             onChange={(e) => {
-              void addFiles(e.target.files);
+              addFiles(e.target.files);
               e.target.value = "";
             }}
           />
           <div className="flex items-center gap-3">
-            <span className="hidden text-[11px] text-slate-400 sm:inline">Enter to send · Shift+Enter for newline</span>
+            {error ? (
+              <span className="text-xs text-red-600">{error}</span>
+            ) : (
+              <span className="hidden text-[11px] text-slate-400 sm:inline">Enter to send · Shift+Enter for newline</span>
+            )}
             <button
-              onClick={send}
-              disabled={disabled || (!text.trim() && files.length === 0)}
+              onClick={() => void send()}
+              disabled={!canSend}
+              aria-label="Send"
               className="flex items-center gap-1 rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white disabled:bg-slate-200 disabled:text-slate-400"
             >
-              <SendHorizontal size={15} />
+              {sending ? <Loader2 size={15} className="animate-spin" /> : <SendHorizontal size={15} />}
             </button>
           </div>
         </div>
