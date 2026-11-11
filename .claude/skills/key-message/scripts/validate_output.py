@@ -56,6 +56,13 @@ def validate_review(path: Path) -> dict:
     if not dvs:
         rep["errors"].append("Decision Data Validation 없음")
     col = {h: i + 1 for i, h in enumerate(heads) if h}
+    corpus = set()
+    if "_meta" in wb.sheetnames:
+        mw = wb["_meta"]
+        try:
+            corpus = set(json.loads("".join(str(mw.cell(i, 1).value or "") for i in range(1, mw.max_row + 1))).get("corpus_numbers", []))
+        except Exception:
+            corpus = set()
     wrap_ok = ws.cell(2, col["Original"]).alignment.wrap_text if ws.max_row >= 2 else True
     if not wrap_ok:
         rep["warnings"].append("Original 컬럼 Wrap Text 미적용")
@@ -76,7 +83,7 @@ def validate_review(path: Path) -> dict:
             rep["warnings"].append(f"Row {r}: ACCEPT인데 AI Recommended 비어 있음")
         o, ai = ws.cell(r, col["Original"]).value, ws.cell(r, col["AI Recommended"]).value
         if ai:
-            fg = fact_guard(o, ai)
+            fg = fact_guard(o, ai, corpus)
             if fg["level"] == "ERROR":
                 (rep["errors"] if d == "ACCEPT" else rep["warnings"]).append(f"Row {r}: AI Recommended Fact Guard ERROR — {'; '.join(fg['messages'])}")
         if st == "ESCALATE" and ai and d == "ACCEPT":

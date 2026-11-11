@@ -34,7 +34,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from analyze_messages import DEFAULT_LEARNING_LOG  # noqa: E402
-from km_common import DECISIONS, cmp_key, dump_json, fact_guard, norm_text, safe_output_path  # noqa: E402
+from km_common import DECISIONS, cmp_key, dump_json, fact_guard, norm_text, safe_output_path, text_units  # noqa: E402
 
 A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 
@@ -167,21 +167,6 @@ def set_paragraph_text(par, new_text: str):
         anchor = nr
 
 
-def text_units(s: str) -> float:
-    u = 0.0
-    for ch in s:
-        o = ord(ch)
-        if ch == " ":
-            u += 0.3
-        elif o >= 0x1100:  # 한글·CJK
-            u += 1.0
-        elif ch.isupper() or ch.isdigit():
-            u += 0.62
-        else:
-            u += 0.52
-    return u
-
-
 def para_size(par, default):
     for r in par.runs:
         if r.font.size:
@@ -220,6 +205,26 @@ def frame_box(shp):
         elif bp.find(f"{{{A_NS}}}normAutofit") is not None:
             autofit = "shrink"
     return Emu(max(w, 1)).pt, Emu(max(h, 1)).pt, autofit
+
+
+def fit_single_line(shp, pi, default_size, before_w):
+    """줄바꿈 없는(wrap=none) 한 줄 박스: 폭 기준. 허용 폭 = max(박스 폭, 원문 폭)"""
+    from pptx.util import Emu, Pt
+    par = shp.text_frame.paragraphs[pi]
+    size = para_size(par, default_size)
+    limit = max(Emu(shp.width or 0).pt, before_w)
+    need = text_units(par.text) * size
+    if need <= limit * 1.05:
+        return None, None
+    min_size = max(size - 2.0, size * 0.9, 9.0)
+    s = size
+    while s - 0.5 >= min_size - 1e-6:
+        s -= 0.5
+        if text_units(par.text) * s <= limit * 1.05:
+            for r in par.runs:
+                r.font.size = Pt(s)
+            return f"한 줄 박스 — 폰트 {size:g}→{s:g}pt 최소 조정", None
+    return None, f"한 줄 박스 폭 초과 (추정 {need:.0f}pt > 허용 {limit:.0f}pt, 약 {int(limit / size)}자) — 문장 축약 필요, 폰트는 유지"
 
 
 def fit_paragraph(shp, pi, default_size, before_h):
@@ -311,6 +316,9 @@ def apply_pptx(orig: Path, out: Path, rows: list[dict], meta: dict, auto: bool, 
         tf = obj.text_frame
         is_shape = mode != "cell" and hasattr(obj, "width") and hasattr(obj, "shape_id")
         before_h = estimate_height(tf, frame_box(obj)[0], default_size) if is_shape else 0
+        bp = tf._txBody.find(f"{{{A_NS}}}bodyPr")
+        one_line = is_shape and bp is not None and bp.get("wrap") == "none"
+        before_w = text_units(tf.paragraphs[pi].text) * para_size(tf.paragraphs[pi], default_size) if one_line else 0
         if mode == "shape":
             pars = tf.paragraphs
             set_paragraph_text(pars[0], new)
@@ -319,7 +327,8 @@ def apply_pptx(orig: Path, out: Path, rows: list[dict], meta: dict, auto: bool, 
         else:
             set_paragraph_text(tf.paragraphs[pi], new)
         if is_shape:
-            note, warn = fit_paragraph(obj, pi, default_size, before_h)
+            note, warn = (fit_single_line(obj, pi, default_size, before_w) if one_line
+                          else fit_paragraph(obj, pi, default_size, before_h))
             if note:
                 entry["warnings"].append(note)
             if warn:

@@ -39,6 +39,9 @@ FOOTER_NAME = re.compile(r"footer|slide\s*number|date|바닥글|슬라이드\s*�
 FOOTER_TEXT = re.compile(r"^(\d{1,3}|-\s*\d+\s*-|page\s*\d+|confidential|copyright.*|ⓒ.*|©.*|대외비|내부용|\d{4}[.\-/]\d{1,2}([.\-/]\d{1,2})?)$", re.I)
 TOC_RE = re.compile(r"^(목차|contents|agenda|index)$|^목\s*차$", re.I)
 SECTION_NUM_RE = re.compile(r"^(\d{1,2}|[IVX]{1,4}|Part\s*\d+|Chapter\s*\d+)[.)]?\s+\S", re.I)
+NAV_RE = re.compile(r"\s>\s|\(\s*\d+\s*/\s*\d+\s*\)\s*$")
+DECL_END = re.compile(r"(니다|습니다|입니다|합니다|됩니다)\.?\s*$")
+KEY_END = re.compile(r"(함|음|됨|확정|확보|제공|지원|적용|구현|전환|연계|처리|방지|단축|축소|해소)\.?\s*$")
 FEATURE_END = re.compile(r"(Agent|에이전트|플랫폼|솔루션|시스템|모듈|엔진|Platform|Solution|Engine)\s*$")
 SENTENCE_END = re.compile(r"(다|니다|요|함|임|음|됨|것|기|화|중)[.!]?$")
 REQ_RE = re.compile(
@@ -125,7 +128,8 @@ def assess(text: str, ctx: dict | None = None) -> dict:
     res["competitor_swap"] = "YES" if (generic or (claims and not nums and not process_hits)) else "NO"
 
     # --- One Message
-    clauses = 1 + len(re.findall(r"(하고|하며|하여|이며|이고|뿐\s*아니라|동시에|및|,|·)", one_line))
+    # 절 수: 연결어미·쉼표만 센다 (가운뎃점·'및'은 명사 나열이므로 제외)
+    clauses = 1 + len(re.findall(r"(하고|하며|하여|이며|이고|뿐\s*아니라|동시에|,)", one_line))
     sentences = len([s for s in re.split(r"[.!?]\s+|\n", t) if s.strip()])
     limit = 60 if mtype == "Governing" else 80
     one_msg_fail = sentences > 2 or res["length"] > limit + 30 or clauses >= 5
@@ -287,6 +291,17 @@ def classify_slide(units: list, page: int) -> dict:
         title = max(upper or cand, key=lambda u: (size(u), -top(u)))
     out["title"] = title
     rest = [u for u in cand if u is not title]
+    # 경로 표시줄(Breadcrumb: "1. 대리점 시스템 구축 > 1) 영업 대리점 신설 (1/2)")은 메시지가 아니라 Section 정보
+    navs = [u for u in rest if NAV_RE.search(u["text"]) and (not sh or top(u) < sh * 0.25)]
+    if NAV_RE.search(title["text"]) and len(rest) > len(navs):
+        navs.append(title)
+        others = [u for u in rest if u not in navs]
+        upper = [u for u in others if not sh or top(u) < sh * 0.3]
+        title = max(upper or others, key=lambda u: (size(u), (u.get("style") or {}).get("bold") or False, -top(u)))
+        out["title"] = title
+    if navs:
+        out["nav"] = navs[0]["text"]
+    rest = [u for u in cand if u is not title and u not in navs]
     sizes = [size(u) for u in rest] or [12]
     body_size = statistics.median(sizes)
 
@@ -303,9 +318,16 @@ def classify_slide(units: list, page: int) -> dict:
         out["body"] = rest
         return out
 
-    # Head message: 제목 아래, 상단 40% 이내, 본문보다 크거나 굵은 문장
+    # Head message ① 상단 40% 이내의 서술형 완결 문장('~합니다.')을 글자 크기와 무관하게 우선
     head = None
     for u in sorted(rest, key=top):
+        if ((not sh) or top(u) < sh * 0.4) and (u.get("style") or {}).get("level", 0) <= 1 \
+                and DECL_END.search(u["text"]) and len(u["text"]) >= 15 \
+                and (u.get("style") or {}).get("n_par_in_shape", 1) <= 2:
+            head = u
+            break
+    # ② 제목 아래, 상단 40% 이내, 본문보다 크거나 굵은 문장
+    for u in ([] if head else sorted(rest, key=top)):
         g_ok = (not sh) or top(u) < sh * 0.4
         lvl = (u.get("style") or {}).get("level", 0)
         if g_ok and lvl == 0 and sentence_like(u["text"]) and (size(u) > body_size or (u.get("style") or {}).get("bold") or size(u) >= 16):
@@ -323,10 +345,15 @@ def classify_slide(units: list, page: int) -> dict:
     cands = [round(size(u)) for u in rest2 if len(u["text"]) >= 8]
     big = [x for x in cands if x >= 14] or cands or [12]
     key_size = max(Counter(big).items(), key=lambda kv: (kv[1], kv[0]))[0]
+    diagram = len(rest2) > 20  # 도식 위주 장표: 라벨은 Key가 아님 → 완결 문장만 Key
     for u in rest2:
         lvl = (u.get("style") or {}).get("level", 0)
         t = u["text"]
-        if lvl == 0 and abs(size(u) - key_size) <= 1.5 and 8 <= len(t) <= 120 and len(out["keys"]) < 6 and (sentence_like(t) or len(t) >= 12):
+        if diagram:
+            ok = lvl == 0 and 15 <= len(t) <= 120 and bool(DECL_END.search(t) or KEY_END.search(t)) and len(out["keys"]) < 6
+        else:
+            ok = lvl == 0 and abs(size(u) - key_size) <= 1.5 and 8 <= len(t) <= 120 and len(out["keys"]) < 6 and (sentence_like(t) or len(t) >= 12)
+        if ok:
             out["keys"].append(u)
         else:
             out["body"].append(u)
@@ -564,9 +591,11 @@ def analyze(content: dict, learning_log: Path | None = None) -> dict:
                 g.update({"source_file": s["file"], "source_type": s["type"], "source_role": s["role"]})
                 groups.append(g)
 
-    # Section 이름 전파
+    # Section 이름 전파 (Breadcrumb가 있으면 첫 단계를 Section으로)
     cur_sec = None
     for g in groups:
+        if g.get("nav"):
+            g["section"] = re.split(r"\s>\s", g["nav"])[0].strip()
         if g["kind"] == "section" and g["title"]:
             cur_sec = g["title"]["text"]
         if not g.get("section"):
@@ -816,6 +845,11 @@ def write_brief(an: dict, path: Path):
         L.append(f"\n### #{m['seq']} [{a['status']}] {m['message_type']} — {m['source_file']} / {m['source_location']}")
         L.append(f"- 장표: {m['slide_title']} | Section: {m['section']} | Audience: {m['audience']} | Story: {m['story_role']}")
         L.append(f"- 원문: {m['original']}")
+        st = m.get("style") or {}
+        if st.get("wrap") == "none":
+            from km_common import text_units
+            lim = max((m.get("geom") or {}).get("width", 0) / 12700, text_units(m["original"]) * (st.get("size") or 12))
+            L.append(f"- ⚠ 한 줄 박스(줄바꿈 없음): 수정문은 약 {int(lim / (st.get('size') or 12))}자 이내")
         if a["problems"]:
             L.append("- 문제: " + " / ".join(a["problems"]))
         if a["tech_terms"]:

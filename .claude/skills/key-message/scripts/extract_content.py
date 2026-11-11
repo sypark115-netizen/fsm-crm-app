@@ -47,6 +47,16 @@ def guess_role(path: Path, text_sample: str, ext: str) -> str:
 
 
 # ------------------------------------------------------------------ PPTX
+def body_props(tf) -> dict:
+    """텍스트 박스 줄바꿈·자동맞춤 속성 (한 줄 박스 Overflow 판단용)"""
+    ns = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+    bp = tf._txBody.find(ns + "bodyPr")
+    if bp is None:
+        return {}
+    fit = "shape" if bp.find(ns + "spAutoFit") is not None else "shrink" if bp.find(ns + "normAutofit") is not None else None
+    return {"wrap": bp.get("wrap") or "square", "autofit": fit}
+
+
 def extract_pptx(path: Path, tag: str) -> tuple[list, dict]:
     from pptx import Presentation
     from pptx.util import Emu
@@ -129,7 +139,7 @@ def extract_pptx(path: Path, tag: str) -> tuple[list, dict]:
                     "text": t,
                     "locator": {"type": "pptx", "slide": slide_no, "shape_path": spath, "para": pi},
                     "style": {"size": font_size_of(par, shp), "bold": bold_of(par), "level": par.level,
-                              "n_par_in_shape": n_par},
+                              "n_par_in_shape": n_par, **body_props(tf)},
                     "geom": geom, "shape_name": shp.name, "placeholder": ph_type,
                 })
 

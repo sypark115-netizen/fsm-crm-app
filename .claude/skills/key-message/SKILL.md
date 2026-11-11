@@ -46,6 +46,8 @@ python $SKILL_DIR/scripts/analyze_messages.py $W/content.json -o $W             
    - **ESCALATE는 원문 유지.** `ai_recommended`를 비우고 `reason`에 필요한 Evidence를 적는다. 근거 후보(`Evidence 후보`)가 있으면 `alt_a`에 "확인 시 사용안"으로만 제시한다.
    - **숫자·고유명사·기술명·고객 요구사항은 원문 그대로 쓴다.** 원문이나 자료에 없는 숫자·효과·경쟁우위·Reference를 만들지 않는다.
    - Governing과 Key가 같은 말을 반복하지 않는다 (Key = Why / How / Evidence).
+   - Brief에 **"⚠ 한 줄 박스: 약 N자 이내"** 가 있으면 그 길이를 넘기지 않는다 (줄바꿈 없는 헤드 박스는 넘치면 라벨·도형을 덮는다).
+   - 장표 간 불일치(같은 효과를 '없앱니다' vs '줄입니다', 중복 헤드, 치환 오류로 깨진 숫자)를 함께 찾아 보고한다.
    - Five Question Test와 Competitor Swap Test, Human Quality Test를 통과하는지 확인한다.
 5. Excel 생성 및 검증:
 ```bash

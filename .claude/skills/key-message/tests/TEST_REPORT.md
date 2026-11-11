@@ -15,7 +15,7 @@
 | TEST 8 — PDF REVIEW (Page·Source 추적) + PDF Review → 원본 PPTX APPLY | PASS | PDF 메시지 27개, Governing 8/8 인식·Page 일치, PDF Review→PPTX 반영 11건, 구조검증 PASS |
 | TEST 9 — XLSX REVIEW (Workbook/Sheet 구조) + XLSX APPLY | PASS | 시트 2개·Header·수식 4개 인식, Governing 4개, 셀 반영 4건, 수식·차트·서식 보존 PASS |
 | TEST 10 — APPLY Decision 처리 (ACCEPT/EDIT/KEEP/ESCALATE/빈칸) | PASS | ACCEPT=AI안, EDIT=Human Final, EDIT(빈칸)=Warning+원문, KEEP/ESCALATE/빈칸=원문 — 반영 2건, 구조검증 PASS |
-| TEST 11 — Round Trip ★ (PPT → REVIEW → Excel → Human → APPLY → PPT) | PASS | 반영 12건 / 유지 15건, 원본 해시 동일, 구조검증 PASS, Score 76.2→81.6, RED 6→2, 긴 EDIT 처리: ['박스 자동 확장(spAutoFit) — 겹침 여부 육안 확인'], LibreOffice 열기 OK, Learning Log 기록 |
+| TEST 11 — Round Trip ★ (PPT → REVIEW → Excel → Human → APPLY → PPT) | PASS | 반영 12건 / 유지 15건, 원본 해시 동일, 구조검증 PASS, Score 76.2→82.2, RED 6→1, 긴 EDIT 처리: ['박스 자동 확장(spAutoFit) — 겹침 여부 육안 확인'], LibreOffice 열기 OK, Learning Log 기록 |
 | TEST 12 — Multi Source ★ (RFP.pdf + Requirements.xlsx + Proposal.pptx + Reference.xlsx) | PASS | 역할 자동판별 4/4, 요구사항 12건(RFP p1~2 + xlsx), COVERED/WEAK 9·GAP 3, 요구사항 연결 메시지 14개, Reference 연결 메시지 4개, Source Trace 시트, 통합 Review→PPTX 반영 PASS |
 | AUTO — 분석→재작성→수정본 자동 생성 | PASS | AUTO 반영 11건 (RED/YELLOW만), GREEN·ESCALATE 원문 유지, 구조검증 PASS |
 | SAFETY — 원본 보호 (덮어쓰기 금지·v3 자동 증가·Stale 차단) | PASS | 같은 경로 출력 거부, v2 존재 시 v3 생성, 원문 불일치(Stale) 반영 0건 |

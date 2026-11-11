@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from analyze_messages import assess  # noqa: E402
-from km_common import DECISIONS, SCHEMA_VERSION, cmp_key, fact_guard, load_json, norm_text  # noqa: E402
+from km_common import DECISIONS, SCHEMA_VERSION, cmp_key, fact_guard, load_json, norm_text, single_line_check  # noqa: E402
 
 from openpyxl import Workbook  # noqa: E402
 from openpyxl.formatting.rule import FormulaRule  # noqa: E402
@@ -163,6 +163,12 @@ def build_rows(an: dict, rec: dict) -> list[dict]:
                 qa.append(f"[{fg['level']}·{label}] " + "; ".join(fg["messages"]))
                 if fg["level"] == "ERROR" or level == "OK":
                     level = fg["level"] if fg["level"] == "ERROR" else ("WARN" if level == "OK" else level)
+        for label, txt in (("AI", ai_rec), ("A", alt_a), ("B", alt_b)):
+            sl = single_line_check(m["original"], txt, m.get("style"), m.get("geom"))
+            if sl:
+                qa.append(f"⚠ [{label}] 한 줄 박스 폭 초과 (허용 약 {sl[0]}자, 현재 {sl[1]}%) — 축약 필요")
+                if level == "OK":
+                    level = "WARN"
         if ai_rec:
             ra = assess(ai_rec, {"message_type": m["message_type"], "slide_evidence": m.get("slide_evidence", []),
                                  "linked_evidence": m.get("linked_evidence", []), "audience": m["audience"]})

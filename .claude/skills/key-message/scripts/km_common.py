@@ -99,7 +99,8 @@ VALUE_TERMS = re.compile(
     r"대응|처리|응대|복구|가용성|SLA|리스크|위험|일정|납기|품질|정확(도|히)|빠르|즉시|실시간|한\s*번에|하나의|"
     r"집중|맡(고|기|습)|판단|승인|검토|의사\s*결정|선별|예외|담당자|사람|상담원|현업|고객|직원|"
     r"연결|이어|통합(해|하여|합니다)|유지|그대로|단계적|확산|재사용|표준|"
-    r"매일|월|주|건|명|%|배|배로"
+    r"매일|월|주|건|명|%|배|배로|"
+    r"노출|차단|막(아|고|습|는|을)|보호|유출|위반|검증|확인|추적|이력"
 )
 # 구체적인 업무·프로세스 명사 (Customer/Process Specificity 신호)
 PROCESS_NOUNS = re.compile(
@@ -218,6 +219,36 @@ COMPANY = re.compile(r"(㈜\s*[가-힣A-Za-z0-9]+|[가-힣A-Za-z0-9]+\s*㈜|주�
 COMMON_LATIN = set("AI IT AX DX OK PM PMO KPI ROI".split())
 
 
+def text_units(s: str) -> float:
+    """한 줄 폭 추정(글자 크기 1 = 한글 1자). 실제 폰트 측정이 아닌 근사치."""
+    u = 0.0
+    for ch in s:
+        o = ord(ch)
+        if ch == " ":
+            u += 0.3
+        elif o >= 0x1100:  # 한글·CJK
+            u += 1.0
+        elif ch.isupper() or ch.isdigit():
+            u += 0.62
+        else:
+            u += 0.52
+    return u
+
+
+def single_line_check(original: str, revised: str, style: dict, geom: dict, tol: float = 1.05):
+    """줄바꿈 없는 한 줄 박스(wrap=none)면 수정문 폭이 허용 폭을 넘는지 검사.
+    허용 폭 = max(박스 폭, 원문 폭). → None(대상 아님/OK) 또는 (허용 글자 수 추정, 초과율)"""
+    if not style or style.get("wrap") != "none" or not revised:
+        return None
+    size = style.get("size") or 12
+    box_pt = (geom or {}).get("width", 0) / 12700
+    limit = max(box_pt, text_units(norm_text(original).split("\n")[0]) * size)
+    need = max(text_units(x) for x in norm_text(revised).split("\n")) * size
+    if need <= limit * tol:
+        return None
+    return round(limit / size), round(need / limit * 100)
+
+
 def numbers(s: str) -> list[str]:
     out = []
     for m in NUM_RE.finditer(norm_text(s)):
@@ -313,6 +344,7 @@ def safe_output_path(src: Path, suffix: str, ext: str | None = None, out: str | 
         p = src.with_name(f"{src.stem}{suffix}{ext}")
     if p == src:
         raise SystemExit(f"[STOP] 출력 경로가 원본과 같습니다: {p}")
+    p.parent.mkdir(parents=True, exist_ok=True)
     if p.exists() and not out:
         m = re.search(r"_v(\d+)$", p.stem)
         n = int(m.group(1)) if m else 1
