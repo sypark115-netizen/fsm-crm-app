@@ -101,7 +101,10 @@ def assess(text: str, ctx: dict | None = None) -> dict:
     nums = numbers(one_line)
     has_value = bool(value_hits) or bool(nums)
     has_process = bool(process_hits)
-    tech_gap = bool(techs) and not has_value and not (has_process and len(process_hits) >= 2)
+    # 근거형 메시지(숫자 또는 고객사·기관명 2개 이상: Why Us / Evidence 장표)는 기술어가 있어도 Tech→Value 공백으로 보지 않음
+    named = len(re.findall(r"[가-힣A-Za-z]+(?:은행|보험|생명|화재|카드|증권|지주|청|부|시청|그룹|라이프)(?=[·,\s등이은는과와의])", one_line))
+    evidence_type = bool(nums) or named >= 2
+    tech_gap = bool(techs) and not has_value and not evidence_type and not (has_process and len(process_hits) >= 2)
     res["tech_terms"] = techs
     res["value_terms"] = sorted(set(value_hits))
     res["process_terms"] = sorted(set(process_hits))
@@ -129,10 +132,10 @@ def assess(text: str, ctx: dict | None = None) -> dict:
 
     # --- One Message
     # 절 수: 연결어미·쉼표만 센다 (가운뎃점·'및'은 명사 나열이므로 제외)
-    clauses = 1 + len(re.findall(r"(하고|하며|하여|이며|이고|뿐\s*아니라|동시에|,)", one_line))
+    clauses = 1 + len(re.findall(r"(?:하고|하며|하여|이며|이고)(?=[\s,])|뿐\s*아니라|동시에|,", one_line))
     sentences = len([s for s in re.split(r"[.!?]\s+|\n", t) if s.strip()])
     limit = 60 if mtype == "Governing" else 80
-    one_msg_fail = sentences > 2 or res["length"] > limit + 30 or clauses >= 5
+    one_msg_fail = sentences > 2 or res["length"] > limit + 30 or clauses >= 6
     res["clauses"] = clauses
     res["sentences"] = sentences
 
