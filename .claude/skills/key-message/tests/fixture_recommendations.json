@@ -1,0 +1,179 @@
+{
+  "_comment": "테스트용: 실제 사용 시 Claude가 analysis_brief.md를 읽고 recommendations.json에 직접 쓰는 내용. 원문 텍스트로 매칭(공백 무시).",
+  "summary": {
+    "diagnosis": "한빛제조의 문제는 '견적 1건 3일, 재작성 18%'로 원문에 명확한데, 전략·배경 장표의 Governing Message가 '생성형 AI', '디지털 혁신' 같은 기술·추상어로 쓰여 있어 고객이 기억할 변화가 보이지 않습니다. To-Be(6p)와 연동 방안(9p)은 이미 좋은 메시지이므로 유지하고, 같은 논리(AI가 초안, 담당자가 승인)를 전략(5p)과 AI Agent(7p) 장표로 끌어올리는 것이 핵심입니다. 수행 역량(10p)은 근거 없는 주장만 있어 Evidence 확보 전에는 수정하지 않습니다.",
+    "top_issues": [
+      "전략·배경 장표 Governing이 기술명과 추상어(디지털 혁신, Intelligent Workplace) 중심 — 고객 업무 변화가 없음",
+      "AI Agent 장표가 'End-to-End 자동화'로만 쓰여 AI와 담당자 역할이 안 보임 (RFP SFR-002 '담당자 승인 후 확정' 요구와 어긋남)",
+      "수행 역량 장표의 '차별화된 운영 역량', '풍부한 경험'은 근거 없음 — Reference 실적으로 증명 필요 (ESCALATE)",
+      "제안 전략 Key 3개가 Governing을 반복 — Why/How/Evidence 역할 분리 필요",
+      "기대 효과의 '3일→4시간'은 강력한 숫자인데 '생산성 극대화'에 묻힘"
+    ]
+  },
+  "by_original": {
+    "생성형 AI 기반 Intelligent Workplace를 구축합니다.": {
+      "status": "RED",
+      "problem": "기술명(생성형 AI, Intelligent Workplace)만 있고 견적 업무가 어떻게 바뀌는지 없음",
+      "customer_value": "자료 찾기·재입력 시간을 줄여 담당자가 견적 판단에 집중",
+      "evidence": "Proposal.pptx Slide 4 본문: 견적 1건 평균 3일(2025년 영업본부 기준), 재작성 18%",
+      "ai_recommended": "흩어진 상담·설계 자료는 AI가 찾아 정리하고, 담당자는 견적 판단에 집중합니다.",
+      "alt_a": "견적 1건에 평균 3일, 같은 정보를 시스템마다 다시 입력하는 구조부터 바꿉니다.",
+      "alt_b": "자료를 찾고 다시 입력하는 일은 AI가 맡고, 담당자는 견적에 집중합니다.",
+      "reason": "Tech → Value: 기술명을 지우고 업무 변화(AI 선처리·담당자 판단)로 바꿈. 배경(Why) 장표이므로 문제를 앞세운 Alt A도 적합 — Alt A의 '3일'은 같은 장표 본문 수치.",
+      "category": "Tech → Value"
+    },
+    "당사의 차별화된 AI 기술을 기반으로 고객의 디지털 혁신을 가속화합니다.": {
+      "status": "RED",
+      "problem": "회사명만 바꾸면 어느 경쟁사도 쓸 수 있는 문장. '차별화된 AI 기술'의 근거 없음, '디지털 혁신 가속화'는 고객 변화가 아님",
+      "customer_value": "견적 업무의 AI·담당자 역할 분담 구조 — 이 제안의 핵심 전략",
+      "evidence": "Proposal.pptx Slide 6(To-Be 흐름), Slide 7 표(AI가 하는 일/사람이 하는 일)",
+      "ai_recommended": "상담·설계·견적을 하나로 잇고, 반복 작성은 AI가, 가격 판단은 담당자가 맡습니다.",
+      "alt_a": "AI가 견적 초안을 쓰고 담당자가 승인하는 구조로 견적 3일을 줄입니다.",
+      "alt_b": "기존 ERP·CRM은 그대로 두고, 견적 업무에 AI를 붙여 단계적으로 넓힙니다.",
+      "reason": "Generic → Differentiated: '차별화' 주장은 근거가 없어 삭제하고, 제안서 6·7p에 실제로 있는 역할 분담 구조를 전략 메시지로 끌어올림. 차별화 Evidence(Reference 등)가 확보되면 Key에 추가.",
+      "category": "Generic → Differentiated"
+    },
+    "AI 기반 업무 자동화를 통한 혁신": {
+      "status": "RED",
+      "problem": "Governing을 반복하는 추상 Key. AI가 무엇을 하는지 없음",
+      "customer_value": "AI가 맡는 업무 범위가 명확해짐",
+      "evidence": "Slide 7 표: 요구 사양 추출, 유사 설계 제시, 단가표 기준 초안 작성",
+      "ai_recommended": "문의 분석·사양 추천·견적 초안은 AI가 먼저 작성",
+      "alt_a": "반복 작성은 AI가 먼저 처리",
+      "alt_b": "",
+      "reason": "Key 1 = How(AI 역할). Slide 7 표의 실제 기능으로 구체화.",
+      "category": "Abstract → Concrete"
+    },
+    "업무 프로세스 고도화 및 디지털 혁신 실현": {
+      "status": "RED",
+      "problem": "추상어 나열(고도화, 디지털 혁신). 무엇이 바뀌는지 없음",
+      "customer_value": "같은 정보를 한 번만 입력",
+      "evidence": "RFP 1. 사업 배경: 같은 내용을 여러 번 입력 / Slide 6 To-Be",
+      "ai_recommended": "상담→설계→견적 정보를 한 번만 입력",
+      "alt_a": "상담·설계·견적 시스템을 하나의 흐름으로 연결",
+      "alt_b": "",
+      "reason": "Key 2 = Why(고객 Pain 해소). 원문 Slide 4·6의 사실만 사용.",
+      "category": "Abstract → Concrete"
+    },
+    "생산성 극대화를 위한 최적의 플랫폼 제공": {
+      "status": "RED",
+      "problem": "근거 없는 형용사(최적의)와 과장(극대화). 사람의 역할 없음",
+      "customer_value": "가격·할인 같은 판단은 사람이 통제 — 고객 요구(SFR-002) 충족",
+      "evidence": "Slide 7 표: 가격·할인 승인은 사람 / RFP SFR-002",
+      "ai_recommended": "가격·할인·최종 견적은 담당자가 승인",
+      "alt_a": "최종 견적은 담당자 승인 후 확정",
+      "alt_b": "",
+      "reason": "Key 3 = Difference(Human/AI 역할). Governing 반복을 없애고 Why/How/역할로 분리.",
+      "category": "Automation → Human/AI Role"
+    },
+    "AI Agent를 활용해 견적 업무를 End-to-End 자동화합니다.": {
+      "status": "RED",
+      "problem": "'End-to-End 자동화'로 사람 역할이 사라짐. 고객은 가격 통제를 잃는다고 읽을 수 있음",
+      "customer_value": "초안 작성 시간은 줄이고, 가격·승인 통제는 그대로",
+      "evidence": "Slide 7 표(사람이 하는 일: 누락 확인, 사양 확정, 가격·할인 승인) / RFP SFR-002",
+      "ai_recommended": "문의 분석부터 견적 초안까지는 AI Agent가, 가격과 최종 승인은 담당자가 맡습니다.",
+      "alt_a": "AI Agent가 견적 초안을 만들고, 담당자는 가격과 할인만 승인합니다.",
+      "alt_b": "견적 초안은 AI Agent가 쓰고, 확정은 담당자가 합니다.",
+      "reason": "Automation → Human/AI Role: 같은 장표 표에 이미 있는 역할 분담을 Governing으로 올림.",
+      "category": "Automation → Human/AI Role"
+    },
+    "고객 문의 분석 Agent": {
+      "status": "YELLOW",
+      "problem": "기능 이름만 있음",
+      "customer_value": "문의에서 요구 사양을 바로 뽑아냄",
+      "evidence": "Slide 7 표: 요구 사양 추출",
+      "ai_recommended": "고객 문의에서 요구 사양 추출",
+      "alt_a": "",
+      "alt_b": "",
+      "reason": "Feature → Business Impact: 표의 'AI가 하는 일'로 바꿈",
+      "category": "Feature → Business Impact"
+    },
+    "설계 사양 추천 Agent": {
+      "status": "YELLOW",
+      "problem": "기능 이름만 있음",
+      "customer_value": "유사 설계를 찾아 사양 결정 시간을 줄임",
+      "evidence": "Slide 7 표: 유사 설계 3건 제시",
+      "ai_recommended": "유사 설계 3건을 찾아 사양 추천",
+      "alt_a": "유사 설계를 찾아 사양 추천",
+      "alt_b": "",
+      "reason": "Feature → Business Impact. '3건'은 같은 장표 표의 숫자.",
+      "category": "Feature → Business Impact"
+    },
+    "견적서 초안 작성 Agent": {
+      "status": "YELLOW",
+      "problem": "기능 이름만 있음",
+      "customer_value": "단가표 기준 초안으로 작성 시간 단축",
+      "evidence": "Slide 7 표: 단가표 기준 초안 작성",
+      "ai_recommended": "단가표 기준으로 견적서 초안 작성",
+      "alt_a": "",
+      "alt_b": "",
+      "reason": "Feature → Business Impact",
+      "category": "Feature → Business Impact"
+    },
+    "차별화된 운영 역량을 통해 안정적인 서비스를 제공합니다.": {
+      "status": "ESCALATE",
+      "problem": "'차별화된 운영 역량'을 증명할 Evidence가 장표·자료에 없음",
+      "customer_value": "",
+      "evidence": "없음",
+      "ai_recommended": "",
+      "alt_a": "",
+      "alt_b": "",
+      "reason": "Evidence 없이 메시지를 강하게 만들지 않음. 원문 유지.",
+      "category": "Generic → Differentiated"
+    },
+    "풍부한 경험과 노하우를 보유하고 있습니다": {
+      "status": "ESCALATE",
+      "problem": "건수·기간·사례 없는 주장",
+      "customer_value": "",
+      "evidence": "없음",
+      "ai_recommended": "",
+      "reason": "유사 사업 수행 실적(건수·고객·성과) 확인 필요 — RFP PMR-001도 실적 제시를 요구",
+      "category": "Generic → Differentiated"
+    },
+    "최고의 전문가를 투입합니다": {
+      "status": "ESCALATE",
+      "problem": "근거 없는 최상급 표현",
+      "customer_value": "",
+      "evidence": "없음",
+      "ai_recommended": "",
+      "reason": "투입 인력의 자격·경력·유사 사업 경험 확인 필요",
+      "category": "Generic → Differentiated"
+    },
+    "운영 중인 서버 120대를 체계적인 전환 계획을 통해 무중단으로 이전할 수 있습니다.": {
+      "status": "YELLOW",
+      "problem": "의미는 좋으나 '체계적인 ~을 통해', '할 수 있습니다'로 결론이 약함",
+      "customer_value": "서비스 중단 없는 이전",
+      "evidence": "같은 장표: 주말 야간 3회 리허설, 실패 시 30분 안에 원복",
+      "ai_recommended": "운영 중인 서버 120대를 서비스 중단 없이 이전합니다.",
+      "alt_a": "서버 120대는 3회 리허설을 거쳐 무중단으로 이전합니다.",
+      "alt_b": "",
+      "reason": "AI Tone → Human Tone. 숫자 120 유지. Alt A의 3회는 같은 장표 Key의 숫자.",
+      "category": "AI Tone → Human Tone"
+    },
+    "견적 작성 시간을 3일에서 4시간으로 단축하여 생산성을 극대화할 수 있습니다.": {
+      "status": "YELLOW",
+      "problem": "강한 숫자(3일→4시간)가 '생산성 극대화'와 '할 수 있습니다'에 묻힘",
+      "customer_value": "견적 대응 속도",
+      "evidence": "같은 장표 차트(72시간→4시간). 4시간이 목표치인지 PoC 결과인지 출처 확인 필요",
+      "ai_recommended": "견적 작성 시간을 3일에서 4시간으로 줄입니다.",
+      "alt_a": "3일 걸리던 견적을 4시간에 끝냅니다.",
+      "alt_b": "",
+      "reason": "Long → Concise. 숫자 3·4 유지, 과장어 삭제.",
+      "category": "Long → Concise"
+    },
+    "견적 1건에 평균 3일이 걸립니다": {
+      "status": "GREEN"
+    },
+    "생산성 극대화": {
+      "status": "RED",
+      "problem": "과장어만 있는 Key",
+      "customer_value": "",
+      "evidence": "Storyline 4p: 견적 1건 평균 3일",
+      "ai_recommended": "견적 대응 시간 단축",
+      "alt_a": "",
+      "alt_b": "",
+      "reason": "Abstract → Concrete. 수치는 원문에 없어 넣지 않음.",
+      "category": "Abstract → Concrete"
+    }
+  }
+}
