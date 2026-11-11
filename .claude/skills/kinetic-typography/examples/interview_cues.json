@@ -1,0 +1,27 @@
+{
+  "_note": "예시 큐시트. 대사는 형식 시연용 샘플이며 실제 발언이 아니다. 실제 작업에서는 녹취(STT) 타임코드로 lines를 채운다.",
+  "video": { "width": 1920, "height": 1080 },
+  "speakers": {
+    "host":  { "name": "진행자",      "color": "#7FDBFF" },
+    "guest": { "name": "허재혁 대표", "color": "#FFC93C" }
+  },
+  "keywords": [
+    { "term": "SSOT", "aliases": ["단일 진실 공급원"], "gloss": "Single Source of Truth · 단일 진실 공급원" },
+    { "term": "PRD", "aliases": ["제품 요구사항 문서"], "gloss": "Product Requirements Document · 제품 요구사항 문서" },
+    { "term": "기능 명세서", "aliases": ["기능명세서"], "gloss": "화면·기능 단위로 동작을 정의한 문서" },
+    { "term": "유저 플로우", "aliases": ["유저플로우", "user flow"], "gloss": "사용자가 목표까지 거치는 화면 흐름" }
+  ],
+  "lines": [
+    { "start": 0.4, "end": 3.2, "speaker": "host",  "text": "오늘은 기획 문서를 어떻게 관리하는지 여쭤볼게요." },
+    { "start": 3.4, "end": 7.0, "speaker": "guest", "text": "저희는 모든 결정을 SSOT 하나에 모읍니다." },
+    { "start": 7.2, "end": 10.6, "speaker": "guest", "text": "그 출발점이 PRD이고, 왜 만드는지를 먼저 적어요." },
+    { "start": 10.8, "end": 14.6, "speaker": "host",  "text": "그럼 기능 명세서는 언제 쓰시나요?" },
+    { "start": 14.8, "end": 19.4, "speaker": "guest", "text": "PRD가 합의되면 기능 명세서로 화면 단위 동작을 정의합니다." },
+    { "start": 19.6, "end": 23.4, "speaker": "guest", "text": "그리고 유저 플로우로 빠진 화면이 없는지 확인하죠." },
+    { "start": 23.6, "end": 27.0, "speaker": "host",  "text": "문서가 여러 개면 서로 어긋나지 않나요?" },
+    { "start": 27.2, "end": 31.0, "speaker": "guest", "text": "그래서 원본은 하나, 나머지는 링크로만 참조합니다." }
+  ],
+  "emphasis": [
+    { "start": 27.4, "end": 31.0, "text": "원본은 하나, 나머지는 링크", "style": "punch" }
+  ]
+}
