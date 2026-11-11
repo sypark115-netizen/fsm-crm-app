@@ -1,0 +1,12 @@
+# proposal-red-team brief — 작업폴더나 입력폴더에 brief.yaml로 저장하거나, 채팅으로 알려주면 된다.
+# 비워둔 항목은 AI가 추정하고 리포트에 ASSUMED로 표시한다.
+customer: ""              # 예: 한빛은행 (cross_check --customer 에 사용)
+customer_aliases: []      # 예: [한빛, HB은행]
+industry: ""              # 은행 / 생명보험 / 손해보험 / 증권 / 카드 / 캐피탈 / 저축은행 / 금융지주 / 금융공공
+project: ""               # 사업명
+mode: auto                # auto / proposal / presentation / both
+competitors: []           # Replaceability Test에 쓸 경쟁사명 (예: [<경쟁사A>, <경쟁사B>])
+win_themes: []            # 의도한 Win Theme 3개 — Memory Test 기준값
+presentation_minutes: null  # 발표시간 (분)
+evaluation_criteria_known: false  # 배점표를 RFP에서 확보했는가
+notes: ""                 # 평가위원 구성, 고객 Hot Button 등 사용자가 아는 맥락

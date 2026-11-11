@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: proposal-compliance-vs-rfp
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  A Mode 1 (Proposal) red team that builds an RFP compliance matrix for five requirements: SER-001 missing,
+  PER-001 conflicting (RTO 6h vs 4h), PMR-001 hard to find / partial (only in an appendix, no experience
+  shown), ECR-001 compliant, NER-001 compliant. Delivered as a spreadsheet plus an executive summary.

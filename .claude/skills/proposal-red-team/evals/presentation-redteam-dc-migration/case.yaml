@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: presentation-redteam-dc-migration
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  A Mode 2 (Presentation) red team of a fictional 11-slide deck with planted defects. The review leads with
+  evaluator-level issues (generic S02 claim, storyline break at S06, other bank name on S07, headcount and RTO
+  inconsistencies, weak PM trust evidence), keeps S04 as a strength, runs a Memory Test against the three
+  stated win themes, and does not invent evidence. Typos stay in a hygiene section.

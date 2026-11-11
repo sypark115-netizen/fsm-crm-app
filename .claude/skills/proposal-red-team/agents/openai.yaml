@@ -1,0 +1,5 @@
+# Optional: Codex skill interface metadata. Claude Code ignores this file.
+interface:
+  display_name: "Proposal Red Team"
+  short_description: "KT 금융 IT 제안서·발표자료를 평가위원 관점에서 검증 (Why KT · Evidence · How · RFP Compliance)"
+  default_prompt: "이 폴더의 RFP와 제안서/발표자료를 proposal-red-team으로 검토해줘"

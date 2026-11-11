@@ -1,0 +1,7 @@
+# never commit real proposals or review outputs
+*.pptx
+*.pdf
+*.docx
+*.xlsx
+.redteam/
+out/
