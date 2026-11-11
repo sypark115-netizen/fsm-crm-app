@@ -116,3 +116,33 @@ def test_render(wd):
     pngs = sorted(p.name for p in (wd / "renders" / "F1").glob("S*.png"))
     assert "S010.png" not in pngs and "S011.png" in pngs  # hidden slide skipped, numbering preserved
     assert list((wd / "renders" / "F1").glob("F1_sheet_*.png"))
+
+
+def test_scripts_have_no_network_code():
+    """Data-leak guard: bundled scripts must not import network clients."""
+    import re as _re
+    banned = _re.compile(r"^\s*(?:import|from)\s+(socket|requests|urllib|http|httpx|aiohttp|ftplib|smtplib|paramiko|boto3|googleapiclient)\b", _re.M)
+    for p in SCRIPTS.glob("*.py"):
+        hits = banned.findall(p.read_text(encoding="utf-8"))
+        assert not hits, f"{p.name} imports network module(s): {hits}"
+
+
+def test_mask_and_restore(wd, tmp_path):
+    w = tmp_path / "masked"
+    shutil.copytree(wd, w, ignore=shutil.ignore_patterns("_vault", "0*_*", "findings.json", "guard_report.md"))
+    r = run(SCRIPTS / "mask.py", w, "--customer", "한빛은행", "--terms", "홍길동")
+    assert r.returncode == 0, r.stderr
+    readable = [p for p in w.rglob("*") if p.suffix in (".md", ".json") and "_vault" not in p.parts and p.name != "manifest.json"]
+    for p in readable:
+        t = p.read_text(encoding="utf-8")
+        for secret in ("한빛", "신한은행", "홍길동"):
+            assert secret not in t, f"{secret} leaked in {p.relative_to(w)}"
+    s9 = (w / "units" / "F1" / "S009.md").read_text(encoding="utf-8")
+    assert "[TERM-01]" in s9 and "42명" in s9  # headcount numbers stay for consistency checks
+    (w / "findings.json").write_text(json.dumps({"meta": {"customer": "[CUSTOMER]"}, "executive": {"overall_assessment": "[CUSTOMER] S07의 [ORG-01] 표기 오류"},
+                                                 "findings": [{"id": "RT-1", "location": "F1#S007", "severity": "MUST FIX", "category": "Copy-Paste", "current": "[ORG-01] 고객님께"}]},
+                                                ensure_ascii=False))
+    assert run(SCRIPTS / "report.py", w).returncode == 0
+    assert run(SCRIPTS / "mask.py", w, "--restore").returncode == 0
+    ex = (w / "01_executive.md").read_text(encoding="utf-8")
+    assert "한빛은행 S07의 신한은행 표기 오류" in ex

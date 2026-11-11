@@ -16,7 +16,7 @@ description: KT가 금융사(은행·보험·증권·카드·캐피탈·금융�
 1. **Evidence·실적·규제를 만들어내지 않는다.** 허위 실적이 Revised Message를 통해 실제 제안서에 들어가면 수주보다 큰 손실(신뢰·법적 Risk)이 난다. 근거가 없으면 `UNSUBSTANTIATED CLAIM`, 필요한 근거는 `[EVIDENCE REQUIRED: 무엇]`, 사실 확인은 `[VERIFY: 무엇]`, 규제는 `REGULATORY VERIFY`.
 2. **Protected Facts는 고치지 않는다** — 고객명·가격·인력·일정·Reference·제품명·기술사양·계약조건·실적·모든 숫자. 의심되면 `VERIFY`로 표시만 한다. Revised Message에서 숫자가 필요하면 원문 숫자를 그대로 쓰거나 `[VERIFY: 수치]` 플레이스홀더를 쓴다.
 3. **원본을 절대 수정·덮어쓰지 않는다.** 모든 산출물은 작업폴더(`<입력폴더>/.redteam/<run-id>/` 또는 사용자가 지정한 곳)에만 쓴다.
-4. **LOCAL ONLY.** 제안서 내용을 웹 검색, 외부 맞춤법 검사기, 외부 OCR/API에 보내지 않는다. 규제 최신성 확인이 필요해도 고객 자료를 검색어에 넣지 않는다(일반 규제명만 검색하고, 그것도 사용자가 허용할 때만).
+4. **데이터 유출 0 (LOCAL ONLY).** 제안서 내용을 웹 검색·웹 fetch, 외부 맞춤법 검사기, 외부 OCR/API, 커넥터(Drive·Slack·메일 등), Git 저장소에 보내지 않는다. 번들 스크립트는 네트워크를 쓰지 않는다(테스트로 검증). 규제 최신성 확인이 필요해도 검색하지 않고 `REGULATORY VERIFY`로 남긴다. 작업폴더(`.redteam/`)를 커밋·업로드하지 않는다. 기본은 **Mask 모드**(아래 1-1)다.
 5. **모든 지적에는 위치가 있다** (`F1#S07` 같은 unit id). 위치 없는 지적은 사용자가 고칠 수 없다.
 6. **일반론 금지.** "Evidence를 보강하세요", "차별화를 강화하세요"처럼 어느 제안서에나 쓸 수 있는 지적은 가치가 없다. 반드시 *그 장표의 그 문장*을 인용하고, 무엇이 왜 부족하며 어떻게 바꿀지를 쓴다.
 7. **우선순위를 지킨다.** 평가위원 관점 > Storyline/전략 > Differentiation > Why KT > Evidence > How > GM > Visual > PM/Team Trust > RFP Compliance > 논리·기술 일관성 > 문장/오탈자. 오탈자는 Hygiene이고 리포트 맨 뒤에 둔다.
@@ -41,6 +41,26 @@ python3 <skill>/scripts/ingest.py <입력파일|폴더> --out <작업폴더>
 - 고객사명, 경쟁사(Replaceability Test용), 의도한 Win Theme 3개, 발표시간
 - 답이 없으면 진행하되 해당 항목은 `ASSUMED`로 표시한다. Brief 양식: `assets/brief.template.yaml`
 
+### 1-1. Mask 모드 (기본값) — LLM이 읽기 전에 가명 처리
+
+모델이 읽는 텍스트에서 고객명·타 금융사명·금액·연락처·지정 용어(인명, 코드명)를 토큰으로 바꾼다. **ingest → render → cross_check → rfp_split 까지 스크립트를 먼저 모두 돌리고**, 그 출력은 개수만 확인한 뒤 바로 mask를 실행한다. 이후에는 마스킹된 파일만 읽는다.
+
+```bash
+python3 <skill>/scripts/mask.py <작업폴더> --customer "<고객사명>" [--alias "약칭,영문명"] [--terms "PM이름,코드명"]
+# … Review, findings.json 작성(토큰 그대로 사용), report.py …
+python3 <skill>/scripts/mask.py <작업폴더> --restore      # 최종 리포트에만 실명 복원 (로컬)
+```
+
+- `_vault/`(토큰↔실명 매핑)와 `manifest.json`의 `path` 필드는 **절대 읽지 않는다**.
+- 인력·일정·RTO 같은 숫자는 정합성 판단에 필요해 마스킹하지 않는다.
+- 렌더 PNG에는 실제 텍스트가 남는다. 사용자가 이미지 열람도 막길 원하면 Visual 판단은 `units`의 metrics(폰트·밀도)로만 하고 리포트에 그 한계를 쓴다.
+- 사용자가 "마스킹 없이"라고 명시하면 생략할 수 있다.
+- 이 스킬이 보장하는 범위는 "스크립트·도구를 통한 외부 전송 0"이다. 모델 자체의 처리 경로(사내 승인 엔드포인트·Zero Data Retention 계약 여부)는 사용자 조직이 정할 일이므로, 첫 실행 시 한 줄로 알린다.
+
+### 1-2. HWP / HWPX
+
+직접 파싱하지 않는다. 사용자에게 한/글에서 PDF로 저장해 같은 폴더에 넣어 달라고 요청한다 (`ingest.py`는 `.hwp`를 건너뛰고 목록만 알려준다).
+
 ## 2. Mode 판정
 
 | 입력 | Mode |
@@ -51,6 +71,8 @@ python3 <skill>/scripts/ingest.py <입력파일|폴더> --out <작업폴더>
 | 제출본만, RFP 없음 | Mode 1을 실행하되 Compliance Matrix는 생략하고 그 사실을 Executive에 명시. RFP를 요청한다 |
 
 ## 3. 렌더링과 교차검증 (결정적 작업 = 스크립트)
+
+Mask 모드에서는 이 3개 스크립트를 **mask.py 실행 전에** 돌린다 (출력은 개수만 확인).
 
 ```bash
 python3 <skill>/scripts/render.py <작업폴더>            # 장표 PNG + 3x3 contact sheet

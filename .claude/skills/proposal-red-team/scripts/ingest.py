@@ -412,6 +412,8 @@ def collect(paths: list[str]) -> list[Path]:
                     fp = Path(root) / f
                     if fp.suffix.lower() in SUPPORTED and not f.startswith(("~$", ".")):
                         files.append(fp)
+                    elif fp.suffix.lower() in (".hwp", ".hwpx", ".ppt", ".doc"):
+                        print(f"[skip] {f}: 지원하지 않는 형식 — PDF로 저장해 같은 폴더에 넣어주세요", file=sys.stderr)
         elif P.is_file():
             files.append(P)
         else:
