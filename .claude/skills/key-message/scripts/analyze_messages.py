@@ -35,6 +35,8 @@ from km_common import (  # noqa: E402
 
 DEFAULT_LEARNING_LOG = Path(os.environ.get("KEY_MESSAGE_HOME", Path.home() / ".claude" / "key-message")) / "learning" / "decisions.jsonl"
 
+# 템플릿 머리글·목차 탭 (예: "CHAPTER 정보보호 부문", "Ⅰ Ⅱ Ⅲ Ⅳ Ⅴ", "… 재구축Ⅰ사업Ⅱ Ⅲ …")
+HEADER_NOISE = re.compile(r"^CHAPTER\b|^[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩIVX\s·|]+$|[ⅠⅡⅢⅣⅤⅥⅦ]\s*[ⅡⅢⅣⅤⅥⅦ]\s*[ⅢⅣⅤⅥⅦ]")
 FOOTER_NAME = re.compile(r"footer|slide\s*number|date|바닥글|슬라이드\s*번호|날짜|page\s*number|logo|로고", re.I)
 FOOTER_TEXT = re.compile(r"^(\d{1,3}|-\s*\d+\s*-|page\s*\d+|confidential|copyright.*|ⓒ.*|©.*|대외비|내부용|\d{4}[.\-/]\d{1,2}([.\-/]\d{1,2})?)$", re.I)
 TOC_RE = re.compile(r"^(목차|contents|agenda|index)$|^목\s*차$", re.I)
@@ -249,7 +251,22 @@ def evidence_request(r: dict) -> list[str]:
 
 
 # ===================================================================== classify
+def off_slide(u) -> bool:
+    """슬라이드 밖(작업용 메모·표식)에 놓인 텍스트 — 화면엔 안 보이지만 파일·PDF 검색엔 남는다"""
+    g = u.get("geom") or {}
+    sw, sh = g.get("slide_w") or 0, g.get("slide_h") or 0
+    if not sw:
+        return False
+    left, top = g.get("left", 0), g.get("top", 0)
+    right, bottom = left + g.get("width", 0), top + g.get("height", 0)
+    return right <= 0 or left >= sw or bottom <= 0 or (sh and top >= sh)
+
+
 def is_footer(u, slide_h):
+    if off_slide(u):
+        return True
+    if HEADER_NOISE.search(u["text"].strip()):
+        return True
     if FOOTER_NAME.search(u.get("shape_name") or ""):
         return True
     if FOOTER_TEXT.match(u["text"]):
@@ -676,8 +693,12 @@ def analyze(content: dict, learning_log: Path | None = None) -> dict:
                 "assessment": a,
             })
 
-    # Slide-level 문제: Governing 없음, Key가 모두 Governing 반복
+    # Slide-level 문제: Governing 없음, 슬라이드 밖 숨은 텍스트
     slide_issues = []
+    for u in units:
+        if u["source_role"] == "proposal" and u["kind"] in ("text", "title", "subtitle") and off_slide(u):
+            slide_issues.append({"source_file": u["source_file"], "page": u.get("page"), "title": "",
+                                 "issue": f"슬라이드 밖 숨은 텍스트: '{u['text'][:40]}' — 화면엔 안 보이지만 파일·PDF 검색에 노출"})
     for s in slides_out:
         if s["kind"] == "content" and not s["has_governing"]:
             slide_issues.append({"source_file": s["source_file"], "page": s["page"], "title": s["title"],
