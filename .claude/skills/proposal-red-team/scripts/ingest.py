@@ -238,7 +238,13 @@ def ingest_pdf(path: Path, fid: str, tables: bool) -> tuple[list[dict], dict]:
             text = clean("\n".join(l["text"] for l in lines))
             gm, gm_src = None, "none"
             top = [l for l in lines if l["top"] / H < 0.35 and 2 <= len(l["text"]) <= 160]
-            if top:
+            km = [l for l in lines if 0.06 < l["top"] / H < 0.30 and len(l["text"]) >= 15
+                  and re.search(r"(니다|한다|된다|이다)[.。]?$", l["text"].strip())]
+            if km:  # Key Message sentence(s) beat the bigger section label
+                first = min(km, key=lambda l: l["top"])
+                gm = clean(" / ".join(l["text"] for l in km if l["top"] - first["top"] < H * 0.06))
+                gm_src = "key_message_sentence"
+            elif top:
                 big = max(l["size"] for l in top)
                 body_sizes = sorted(l["size"] for l in lines)
                 median = body_sizes[len(body_sizes) // 2] if body_sizes else big
@@ -284,13 +290,15 @@ def ingest_pdf(path: Path, fid: str, tables: bool) -> tuple[list[dict], dict]:
 
 
 def _pdf_lines(page):
-    words = page.extract_words(extra_attrs=["size"], use_text_flow=True, keep_blank_chars=False)
+    # x_tolerance 1.5: Korean PDFs often encode word spacing as narrow gaps without space glyphs;
+    # the default (3) glues whole titles together ("일본지사전환을출발점으로...").
+    words = page.extract_words(extra_attrs=["size"], use_text_flow=True, keep_blank_chars=False, x_tolerance=1.5)
     lines: list[dict] = []
     for w in words:
         if lines and abs(lines[-1]["top"] - w["top"]) < max(2.0, w["size"] * 0.4) and abs(lines[-1]["size"] - w["size"]) < 1.5:
             gap = w["x0"] - lines[-1]["x1"]
             # PDF producers often split one Korean word into chunks; only add a space for a real gap
-            sep = "" if -1 < gap < w["size"] * 0.18 else " "
+            sep = "" if -1 < gap < w["size"] * 0.08 else " "
             lines[-1]["text"] += sep + w["text"]
             lines[-1]["size"] = max(lines[-1]["size"], w["size"])
             lines[-1]["x1"] = w["x1"]
