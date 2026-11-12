@@ -1,0 +1,24 @@
+id,source_type,url,speaker,intent,need_type,need_key,intensity,evidence_summary,bias_note
+S01,threads,https://www.threads.com/@drill__jung/post/DaUdyqOkab2/,SUPPLIER,SALES_PAIN,NEW_CUSTOMER,NO_INQUIRIES,3,"10년차 에어컨청소 기사: 시즌인데도 주문이 너무 없어서 SNS를 시작함",당사자 발화
+S02,soomgo_community,https://soomgo.com/community/soomgo-life/posts/661e6cd8400646d900b2a04d,SUPPLIER,SALES_PAIN,NEW_CUSTOMER,PLATFORM_DEPENDENCE,3,"고수: 요청서 1건 열람에 2,500~3,000원, 하루 10~30건 봐야 1건 성사될까 말까",당사자 발화
+S03,namuwiki,https://namu.wiki/w/%EC%88%A8%EA%B3%A0,OTHER,INFORMATION,NEW_CUSTOMER,PLATFORM_DEPENDENCE,2,"답장도 못 받을 견적서에 건당 7,000원, 10건이면 수수료만 7만원",2차 정리 자료
+S04,youtube,https://www.youtube.com/watch?v=b1NT6u4JSCA,OTHER,COMPLAINT,NEW_CUSTOMER,PLATFORM_DEPENDENCE,2,"'견적만 열어도 돈 빠져나가는 구조, 숨고 할수록 망하는 이유'",자극적 제목(조회수 목적)
+S05,soomgo_community,https://soomgo.com/community/soomgo-life/posts/65955a33d87a825e56378700,BUYER,BUSINESS_QA,CONVERSION,PRICE_SHOPPING,2,"고객: 이사청소 견적 올렸더니 채팅 30개 → 공급 과잉, 고객은 비교에 지침",고객 시점(공급자 경쟁 강도 증거)
+S06,soomgo_community,https://soomgo.com/community/soomgo-life/posts/65350f1d45b7a0bd9dae5820,BUYER,BUSINESS_QA,CONVERSION,PRICE_SHOPPING,1,"고객: 거절 답장만 해도 고수에게 견적비 2천원이 나간다는 걸 알게 됨",고객 시점
+S07,tistory,https://lsy-world.tistory.com/26,SUPPLIER,BUSINESS_QA,NEW_CUSTOMER,SEASONAL_SLUMP,2,"11년차: 1월 비수기, 성수기 몇 달치로 1년을 버텨야 함. 초기엔 멀리·저녁까지 일 잡음",당사자 발화(2022)
+S08,tistory,https://lsy-world.tistory.com/26,SUPPLIER,PRODUCTIVITY_PAIN,WORKFORCE,HIRING_HELPER,2,"성수기 대비: 동선 단축, 보조 운용, 남는 오더·대량건 처리 방식 준비 필요",당사자 발화
+S09,tistory,https://lsy-world.tistory.com/26,SUPPLIER,BUSINESS_QA,OTHER,BURNOUT_AGING,2,"몸으로 버는 일이라 10년 뒤 같은 퍼포먼스 불가, 세컨잡 권유",당사자 발화
+S10,naver_blog,https://blog.naver.com/gogi_master/221751274622,SUPPLIER,BUSINESS_QA,NEW_CUSTOMER,SEASONAL_SLUMP,2,"'월천'은 성수기 2~3달뿐, 봄·가을·겨울은 턱없이 적음",당사자 발화(2020)
+S11,naver_blog,https://blog.naver.com/gogi_master/221751274622,SUPPLIER,CRM_PAIN,CRM,CUSTOMER_LIST_SCATTERED,2,"시간·고객·스케줄·AS 응대 관리가 안 되면 반드시 탈이 남, AS 비용이 창업비보다 큼",당사자 발화
+S12,naver_blog,https://blog.naver.com/taxlee99/224235276601,OTHER,MARKETING_PAIN,MARKETING,NO_TIME_TO_POST,2,"블로그 포기 이유: 시간 부족, 쓰는 법 모름, 성과 느림, 경쟁, 꾸준함 유지 어려움",마케팅 대행사 글(판매 목적)
+S13,naver_blog,https://m.blog.naver.com/moby2023/224303618912,OTHER,MARKETING_PAIN,CONVERSION,EXPOSURE_NO_INQUIRY,2,"블로그 상단노출은 되는데 문의가 없는 청소업체들",마케팅 대행사 글
+S14,youtube_comment,https://www.youtube.com/watch?v=44AisqGBWhs,SUPPLIER,AI_INTEREST,AI,AI_TOOL_DISAPPOINTMENT,3,"사장님 댓글: 마케팅 AI 프로그램 결제해서 블로그 열심히 쓰는데 구매전환이 너무 안 됨",당사자 발화
+S15,naver_blog,https://m.blog.naver.com/wm0640/224259367651,OTHER,BUSINESS_QA,NEW_CUSTOMER,NEWBIE_NO_PIPELINE,2,"교육 후 바로 개인창업 → 일감 연결 못 해 초기에 포기하는 경우가 많음",교육업체 글
+S16,threads,https://www.threads.com/@cheongsohim/post/DQaGioRE4WG/,SUPPLIER,COMPLAINT,PRICING,UNDERPRICING,2,"입주청소 사장: 가격만 보고 고르면 결국 고객이 손해, 저가 후 바가지 업체 때문에 업계 신뢰 하락",당사자 발화
+S17,threads,https://www.threads.com/@tteule_home/post/DbFpQVrkaU8/,SUPPLIER,COMPLAINT,PRICING,QUOTE_STRUCTURE,2,"추가비용 사전 고지했는데도 분쟁 → 견적 범위·추가비 명시 문제",당사자 발화
+S18,soomgo_community,https://soomgo.com/community/soomgo-life/posts/6869e0f3a2573e091fb5bde8,BUYER,COMPLAINT,BUSINESS,TRUST_NO_SHOW,2,"고객: 업체가 일정 미루더니 당일 연락두절 → 업계 전반 신뢰 문제",고객 시점
+S19,soomgo_community,https://soomgo.com/community/soomgo-life/posts/680c5198b541fae29291d714,BUYER,COMPLAINT,MARKETING,REVIEW_COLLECTION,2,"고객: 청소업체 사장이 리뷰를 좋게만 쓰라고 압박",고객 시점(리뷰 관리 미숙)
+S20,soomgo_community,https://soomgo.com/community/soomgo-life/posts/63310ca2f725d74b1bebcc61,BUYER,COMPLAINT,BUSINESS,AS_HANDLING,1,"고객: 이사청소 대충 하고 감, A/S 문의",고객 시점
+S21,naver_blog,https://blog.naver.com/PostView.naver?blogId=cleanmindtop&logNo=223954747245,OTHER,SUPPLY,NEW_CUSTOMER,SEASONAL_SLUMP,1,"비수기 매출 대안으로 세탁기·건조기 청소 기술 확장 교육 판매",교육업체 광고
+S22,web_price,https://soomgo.com/prices/%EC%97%90%EC%96%B4%EC%BB%A8-%EC%B2%AD%EC%86%8C,OTHER,INFORMATION,PRICING,PRICE_BENCHMARK,1,"숨고 에어컨청소 평균 12만원(6~26만원)",가격 참고 데이터
+S23,web_price,https://tidyclean.co.kr/blog-aircon-price,OTHER,INFORMATION,PRICING,PRICE_BENCHMARK,1,"완전분해 7~9만원, 부분분해 4~6만원(벽걸이 기준 추정)",업체 자체 자료
