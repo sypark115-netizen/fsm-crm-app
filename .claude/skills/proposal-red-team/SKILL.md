@@ -57,7 +57,12 @@ python3 <skill>/scripts/mask.py <작업폴더> --restore      # 최종 리포트
 - 사용자가 "마스킹 없이"라고 명시하면 생략할 수 있다.
 - 이 스킬이 보장하는 범위는 "스크립트·도구를 통한 외부 전송 0"이다. 모델 자체의 처리 경로(사내 승인 엔드포인트·Zero Data Retention 계약 여부)는 사용자 조직이 정할 일이므로, 첫 실행 시 한 줄로 알린다.
 
-### 1-2. HWP / HWPX
+### 1-2. 스캔본 PDF (RFP에 흔함)
+
+`ingest.py`가 "텍스트가 거의 없음 (스캔본)"을 경고하면, 외부 OCR 서비스가 아니라 로컬 Tesseract로 읽는다:
+`python3 <skill>/scripts/ocr.py <작업폴더> --file F#`. OCR 문장은 오탈자가 섞이므로 RFP를 인용할 때는 페이지 이미지로 확인한다.
+
+### 1-3. HWP / HWPX
 
 직접 파싱하지 않는다. 사용자에게 한/글에서 PDF로 저장해 같은 폴더에 넣어 달라고 요청한다 (`ingest.py`는 `.hwp`를 건너뛰고 목록만 알려준다).
 
@@ -81,6 +86,8 @@ python3 <skill>/scripts/rfp_split.py <작업폴더>          # Mode 1: RFP 요�
 ```
 
 - `render.py`는 같은 이름의 PDF가 있으면 PDF를 우선 렌더한다 (PPTX→LibreOffice 렌더는 폰트가 바뀔 수 있다). `render_report.json`의 폰트 경고가 있으면 Visual 판단에 그 한계를 명시한다.
+- `cross_check.json`의 `submission_hygiene`는 제출 전에 반드시 지워야 할 것을 모은다: 슬라이드 밖 개체, 보이는 작업 메모(미완·GD·질의중·확인 필요), 노트, RFP가 금지하기 쉬운 표현(예시·샘플·추후 협의·할 수 있다). RFP의 작성지침(예: "예시 포함 불가", "모호한 표현은 불가능으로 처리")과 대조해 Severity를 정한다.
+- 노트(Notes)는 RFP 근거 페이지·결정 이력이 적혀 있는 경우가 많다. Compliance 매핑의 단서로 쓰되, 제출 파일에 남아 있으면 MUST FIX 후보다.
 - `cross_check.py`의 결과는 **후보**다. 숫자·일정·인력·고객명·용어 불일치 후보를 맥락을 보고 판정한다 (예: 단계별 인력 42명/전체 45명은 모순이 아닐 수 있다).
 - 숫자를 LLM이 직접 세거나 대조하지 않는다. 스크립트 결과와 원문 unit을 근거로 판단한다.
 

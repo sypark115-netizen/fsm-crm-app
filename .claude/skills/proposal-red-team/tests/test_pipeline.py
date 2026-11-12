@@ -13,6 +13,7 @@ import pytest
 SKILL = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL / "scripts"
 sys.path.insert(0, str(SKILL / "tests"))
+sys.path.insert(0, str(SCRIPTS))
 import make_fixtures  # noqa: E402
 
 
@@ -146,3 +147,34 @@ def test_mask_and_restore(wd, tmp_path):
     assert run(SCRIPTS / "mask.py", w, "--restore").returncode == 0
     ex = (w / "01_executive.md").read_text(encoding="utf-8")
     assert "한빛은행 S07의 신한은행 표기 오류" in ex
+
+
+def test_submission_hygiene_and_key_message(tmp_path):
+    from pptx import Presentation
+    from pptx.util import Inches, Pt
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Inches(13.333), Inches(7.5)
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    make_fixtures.tb(s, "1. 클라우드 보안 아키텍처", 0.5, 0.3, 8, 0.5, 16)            # section label (bigger font)
+    make_fixtures.tb(s, "예방, 탐지, 교정이 연계된 다층 보안을 구현합니다", 0.5, 1.0, 10, 0.5, 12)  # key message
+    make_fixtures.tb(s, "GD11.11 (미완)", 14.0, 0.5, 2, 0.5, 10)                 # off-slide sticky note
+    make_fixtures.tb(s, "자동 대응 (예시)", 0.5, 3.0, 4, 0.5, 10)
+    s.notes_slide.notes_text_frame.text = "[확인 필요] 조항 번호 확정"
+    fx = tmp_path / "fx"; fx.mkdir()
+    prs.save(fx / "발표.pptx")
+    w = tmp_path / "wd"
+    assert run(SCRIPTS / "ingest.py", fx, "--out", w).returncode == 0
+    u = json.loads((w / "docmodel.json").read_text())["units"][0]
+    assert u["gm"].startswith("예방, 탐지, 교정") and u["gm_source"] == "key_message_sentence"
+    assert run(SCRIPTS / "cross_check.py", w).returncode == 0
+    h = json.loads((w / "cross_check.json").read_text())["submission_hygiene"]
+    assert any("미완" in o["text"] for o in h["off_slide_text"])
+    assert any(o["hit"] == "예시" for o in h["risky_wording"])
+    assert h["speaker_notes"] and "확인 필요" in h["speaker_notes"][0]["work_notes"][0].replace(" ", " ")
+
+
+def test_regulators_not_flagged_as_other_customer(tmp_path):
+    from cross_check import other_customers
+    res = other_customers([("F1#S001", "금융보안원 클라우드 이용 가이드 준수, 신한은행 고객님께")], "한빛은행", [])
+    names = {r["name"] for r in res}
+    assert "신한은행" in names and "금융보안원" not in names

@@ -163,8 +163,9 @@ def ingest_pptx(path: Path, fid: str) -> tuple[list[dict], dict]:
                 is_title = ph in title_types
                 if is_title and title_text is None:
                     title_text = txt
+                off = x < -0.01 or y < -0.01 or x > 0.99 or y > 0.99
                 blocks.append({
-                    "shape_id": shp.shape_id, "name": shp.name, "text": txt,
+                    "shape_id": shp.shape_id, "name": shp.name, "text": txt, "off_slide": off,
                     "font_pt": size, "bbox": [round(x, 3), round(y, 3), round(w, 3), round(h, 3)],
                     "placeholder": str(ph).split(".")[-1].split(" ")[0] if ph is not None else None,
                     "is_title": is_title,
@@ -199,7 +200,15 @@ def _pick_gm(title_text, blocks):
     """GM = title placeholder; else the largest-font text in the top 35% of the slide."""
     if title_text:
         return title_text, "title_placeholder"
-    cands = [b for b in blocks if b["bbox"] and b["bbox"][1] < 0.35 and len(b["text"]) <= 160]
+    cands = [b for b in blocks if b["bbox"] and not b.get("off_slide") and b["bbox"][1] < 0.35 and len(b["text"]) <= 240]
+    # Korean proposal templates often put a small section title above a "Key Message" sentence.
+    # The governing message is the claim sentence (…합니다/…니다/…다), not the bigger section label.
+    msgs = [b for b in cands if re.search(r"(니다|한다|된다|이다)[.。]?$", b["text"].strip()) and len(b["text"]) >= 15]
+    if msgs:
+        b = min(msgs, key=lambda b: b["bbox"][1])
+        joined = " / ".join(m["text"].replace("\n", " ") for m in sorted(msgs, key=lambda m: m["bbox"][1])
+                            if abs(m["bbox"][1] - b["bbox"][1]) < 0.06)
+        return joined, "key_message_sentence"
     sized = [b for b in cands if b["font_pt"]]
     if sized:
         b = max(sized, key=lambda b: (b["font_pt"], -b["bbox"][1]))
@@ -263,6 +272,9 @@ def ingest_pdf(path: Path, fid: str, tables: bool) -> tuple[list[dict], dict]:
             if hasattr(page, "close"):
                 page.close()
     meta = {"pages": n, "landscape": landscape_votes > n / 2}
+    if n and sum(u["metrics"]["text_chars"] for u in units) < 20 * n:
+        meta["scanned"] = True
+        print(f"[warn] {path.name}: 텍스트가 거의 없음 (스캔본) — scripts/ocr.py 로 로컬 OCR 후 다시 사용", file=sys.stderr)
     # carry section forward
     cur = None
     for u in units:
@@ -379,7 +391,7 @@ def unit_markdown(u: dict, fname: str) -> str:
     for b in u["blocks"]:
         if b.get("is_title"):
             continue
-        meta = []
+        meta = ["슬라이드 밖"] if b.get("off_slide") else []
         if b.get("font_pt"):
             meta.append(f"{b['font_pt']:.0f}pt")
         if b.get("bbox"):
@@ -460,7 +472,8 @@ def main():
         manifest.append({"file_id": fid, "path": str(f), "name": f.name, "ext": ext,
                          "size_mb": round(f.stat().st_size / 1e6, 2), "units": len(units),
                          "role_guess": role, "role_reason": why, "meta": meta,
-                         "gm_missing": sum(1 for u in units if not u["gm"])})
+                         "gm_missing": sum(1 for u in units if not u["gm"]),
+                         "scanned": meta.get("scanned", False)})
         udir = out / "units" / fid
         udir.mkdir(parents=True, exist_ok=True)
         for u in units:

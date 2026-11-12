@@ -29,6 +29,7 @@ from cross_check import FIN, unit_texts  # noqa: E402
 SEV_ORDER = ["MUST FIX", "SHOULD FIX", "ENHANCEMENT", "PASS"]
 HYGIENE_CATS = {"hygiene", "오탈자", "맞춤법", "띄어쓰기", "용어", "문장", "typo"}
 NUM_IN_TEXT = re.compile(r"\d[\d,\.]*\s?(?:%|억|만|원|명|개월|년|주|일|시간|분|초|건|곳|대|개|배|TB|PB|Gbps|ms|MM|M/M|x|X)?")
+UNIT_REF = re.compile(r"(?:F\d+#)?[SP]\d{3}(?:~[SP]?\d{3})?|RT-\d+|[가-나]-\d+[a-z]?|[A-Z]{2,4}-\d{2,4}")
 PLACEHOLDER = re.compile(r"\[(?:VERIFY|EVIDENCE REQUIRED)[^\]]*\]")
 
 
@@ -45,6 +46,7 @@ def guard_text(text: str, corpus_flat: str, corpus_nums: set[str]) -> tuple[str,
     if not text:
         return text, []
     body = PLACEHOLDER.sub("", text)
+    body = UNIT_REF.sub("", body)  # slide/page ids (S007, F1#P022, RT-03, 가-10) are not facts
     issues = []
     for m in NUM_IN_TEXT.finditer(body):
         raw = m.group(0).strip()

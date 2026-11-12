@@ -63,6 +63,14 @@ JOSA = {"으로", "에서", "에게", "까지", "부터", "보다", "처럼", "�
         "으로써", "에는", "에도", "과의", "와의", "이라", "라는", "이라는", "에서의", "으로의", "등을", "등의", "등과", "하는", "되는"}
 
 
+# public bodies / market infrastructure: cited in regulation context, not a copy-paste customer name
+INSTITUTIONS = {"금융결제원", "코스콤", "한국거래소", "예탁결제원", "한국예탁결제원", "금융보안원", "신용보증기금",
+                "기술보증기금", "예금보험공사", "주택금융공사", "한국주택금융공사", "서민금융진흥원", "우정사업본부"}
+WORK_NOTE = re.compile(r"(미완|수정완료|수정 완료|GD\s?\d|피드백|\d{1,2}[./]\d{1,2}\s?(?:오전|오후)|미팅 후|적용 중|질의\s?중|확인\s?필요|"
+                       r"검토\s?필요|TBD|TODO|추후 (?:반영|확정|협의)|재 ?반영 예정|작성 중|임시|draft|DRAFT|\(안\)|최종안)")
+RISKY = re.compile(r"(예시|샘플|참고용|가안|추후 협의|할 수 있[다음]|사용할 수 있|고려할 수 있|검토 예정|검토 중)")
+
+
 def unit_texts(units):
     for u in units:
         parts = [u.get("gm") or ""]
@@ -137,6 +145,8 @@ def other_customers(texts, customer, aliases):
     for uid, txt in texts:
         flat = txt.replace(" ", "")
         for name in FIN:
+            if name in INSTITUTIONS:
+                continue
             if name in flat and not any(name in o or o in name for o in own if o):
                 i = flat.find(name)
                 found[name].append({"uid": uid, "context": flat[max(0, i - 25):i + len(name) + 25]})
@@ -209,6 +219,25 @@ def kt_naming(texts):
     return {f: len(u) for f, u in forms.items()} if len(forms) > 1 else {}
 
 
+def hygiene_of_file(units):
+    """Things that must not ship: off-slide objects, work notes, speaker notes, wording RFPs penalize."""
+    off, notes, wn, risky = [], [], [], []
+    for u in units:
+        for b in u.get("blocks", []):
+            t = b.get("text", "").replace("\n", " ")
+            if b.get("off_slide"):
+                off.append({"uid": u["uid"], "text": t[:80]})
+                continue
+            for m in WORK_NOTE.finditer(t):
+                wn.append({"uid": u["uid"], "hit": m.group(0), "context": t[max(0, m.start()-20):m.end()+20]})
+            for m in RISKY.finditer(t):
+                risky.append({"uid": u["uid"], "hit": m.group(0), "context": t[max(0, m.start()-20):m.end()+20]})
+        if u.get("notes"):
+            notes.append({"uid": u["uid"], "chars": len(u["notes"]),
+                          "work_notes": sorted({m.group(0) for m in WORK_NOTE.finditer(u["notes"])})[:6]})
+    return {"off_slide_text": off, "visible_work_notes": wn, "speaker_notes": notes, "risky_wording": risky}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("workdir")
@@ -234,6 +263,7 @@ def main():
         "term_variants": term_variants(texts),
         "duplicate_gm": duplicate_gm(units),
         "kt_naming": kt_naming(texts),
+        "submission_hygiene": hygiene_of_file(units),
     }
     (wd / "cross_check.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
 
@@ -257,10 +287,22 @@ def main():
     md.append(f"\n## 6. 중복 GM ({len(res['duplicate_gm'])})")
     for c in res["duplicate_gm"]:
         md.append(f"- “{c['gm']}” @ {', '.join(c['uids'])}")
+    h = res["submission_hygiene"]
+    md.append(f"\n## 8. 제출 위생 — 슬라이드 밖 개체 {len(h['off_slide_text'])} · 보이는 작업메모 {len(h['visible_work_notes'])} · 노트 있는 장 {len(h['speaker_notes'])} · 주의 표현 {len(h['risky_wording'])}")
+    for o in h["off_slide_text"][:30]:
+        md.append(f"- [슬라이드 밖] {o['uid']}: {o['text']}")
+    for o in h["visible_work_notes"][:30]:
+        md.append(f"- [작업메모] {o['uid']}: “{o['context']}”")
+    for o in h["speaker_notes"][:30]:
+        md.append(f"- [노트] {o['uid']}: {o['chars']}자" + (f" — {', '.join(o['work_notes'])}" if o["work_notes"] else ""))
+    for o in h["risky_wording"][:30]:
+        md.append(f"- [주의 표현 '{o['hit']}'] {o['uid']}: “{o['context']}” — RFP가 예시·모호 표현을 금지하는지 확인")
     if res["kt_naming"]:
         md.append("\n## 7. KT 표기 혼용\n- " + ", ".join(f"`{k}`×{v}" for k, v in res["kt_naming"].items()))
     (wd / "cross_check.md").write_text("\n".join(md) + "\n", encoding="utf-8")
-    print(json.dumps({k: (len(v) if isinstance(v, (list, dict)) else v) for k, v in res.items()}, ensure_ascii=False))
+    summary = {k: (len(v) if isinstance(v, (list, dict)) else v) for k, v in res.items() if k != "submission_hygiene"}
+    summary.update({k: len(v) for k, v in res["submission_hygiene"].items()})
+    print(json.dumps(summary, ensure_ascii=False))
 
 
 if __name__ == "__main__":
