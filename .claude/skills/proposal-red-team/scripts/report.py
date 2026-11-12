@@ -73,6 +73,121 @@ def table(rows: list[list], header: list[str]) -> str:
     return "\n".join(out)
 
 
+SEV_FILL = {"MUST FIX": "F8CBAD", "SHOULD FIX": "FFE699", "ENHANCEMENT": "DDEBF7", "PASS": "C6EFCE",
+            "MISSING": "F8CBAD", "CONFLICT": "F8CBAD", "PARTIAL": "FFE699", "HARD TO FIND": "FFE699", "COMPLIANT": "C6EFCE",
+            "UNSUBSTANTIATED": "F8CBAD", "WEAK": "FFE699", "VERIFY": "FFE699", "SUPPORTED": "C6EFCE"}
+
+
+def write_workbook(wd: Path, meta, ex, findings, comp, ledger, count):
+    """One Excel file the proposal team can filter, assign and track: 요약 / 검토의견 / 장표별 / RFP 대응 / Evidence / 제출위생."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    wb = Workbook()
+
+    def sheet(title, head, rows, widths, color_col=None, first=False, track=False):
+        ws = wb.active if first else wb.create_sheet()
+        ws.title = title
+        if track:
+            head = head + ["담당자", "조치 상태", "조치 내용"]
+            widths = widths + [10, 11, 30]
+        ws.append(head)
+        for r in rows:
+            ws.append([("" if v is None else str(v)) for v in r] + ([""] * 3 if track else []))
+        for c in ws[1]:
+            c.font = Font(bold=True, color="FFFFFF")
+            c.fill = PatternFill("solid", fgColor="1F3864")
+            c.alignment = Alignment(wrap_text=True, vertical="center")
+        for row in ws.iter_rows(min_row=2):
+            for c in row:
+                c.alignment = Alignment(wrap_text=True, vertical="top")
+            if color_col is not None:
+                v = str(row[color_col].value or "")
+                for k, col in SEV_FILL.items():
+                    if v.startswith(k):
+                        row[color_col].fill = PatternFill("solid", fgColor=col)
+                        break
+        for i, w in enumerate(widths):
+            ws.column_dimensions[chr(65 + i) if i < 26 else "A" + chr(65 + i - 26)].width = w
+        ws.freeze_panes = "B2"
+        if ws.max_row > 1:
+            ws.auto_filter.ref = ws.dimensions
+        if track and ws.max_row > 1:
+            col = chr(65 + len(head) - 2)
+            dv = DataValidation(type="list", formula1='"미착수,진행중,완료,보류(사유)"', allow_blank=True)
+            ws.add_data_validation(dv)
+            dv.add(f"{col}2:{col}{ws.max_row}")
+        return ws
+
+    # 요약
+    rows = [["고객사", meta.get("customer", "")], ["대상", meta.get("title", "")], ["Mode", meta.get("mode", "")],
+            ["Domain", meta.get("domains", "")], ["검토일", meta.get("date", "")],
+            ["판정 집계", " · ".join(f"{k} {v}" for k, v in count.items())],
+            ["Overall Assessment", ex.get("overall_assessment", "")]]
+    rows += [[f"평가위원 여정 — {k}", v] for k, v in (ex.get("evaluator_journey") or {}).items()]
+    for i, t in enumerate(ex.get("top5", []), 1):
+        rows.append([f"Top {i}. {t.get('title','')}", f"[위치] {', '.join(t.get('where', []))}\n[영향] {t.get('why','')}\n[수정] {t.get('fix','')}"])
+    rows += [["What Works Well", w] for w in ex.get("what_works_well", [])]
+    mt = ex.get("memory_test")
+    if mt:
+        rows.append(["Memory Test", f"기억될 것: {' / '.join(mt.get('remembered', []))}\n의도: {' / '.join(mt.get('intended', []))}\n일치: {mt.get('match','')}\n원인: {mt.get('gap_cause','')}"])
+    rows += [[f"전제(ASSUMED)", a] for a in meta.get("assumptions", [])]
+    sheet("요약", ["항목", "내용"], rows, [34, 120], first=True)
+
+    # 검토의견 (one row per finding, trackable)
+    head = ["ID", "위치", "Severity", "Category", "Flags", "현재 문구", "문제", "왜 중요한가", "권고", "수정 문구(안)",
+            "Why KT", "Evidence", "How", "Visual 권고", "평가위원 시각"]
+    rows = []
+    for f in findings:
+        tri = f.get("triangle") or {}
+        rows.append([f.get("id"), f.get("location"), f.get("severity"), f.get("category"), ", ".join(f.get("flags", [])),
+                     f.get("current"), f.get("issue"), f.get("why_it_matters"), f.get("recommendation"), f.get("revised"),
+                     tri.get("why_kt"), tri.get("evidence"), tri.get("how"), f.get("visual"), f.get("evaluator")])
+    sheet("검토의견", head, rows, [8, 16, 12, 14, 18, 36, 44, 34, 40, 40, 18, 22, 22, 30, 26], color_col=2, track=True)
+
+    # 장표별 (every slide/page of the reviewed deck, with its GM and the findings that touch it)
+    try:
+        units = json.loads((wd / "docmodel.json").read_text(encoding="utf-8"))["units"]
+        roles = {m["file_id"]: m.get("role_guess") for m in json.loads((wd / "manifest.json").read_text(encoding="utf-8"))["files"]}
+    except Exception:
+        units, roles = [], {}
+    order = {s: i for i, s in enumerate(SEV_ORDER)}
+    rows = []
+    for u in units:
+        if roles.get(u["file_id"]) not in ("presentation", "proposal"):
+            continue
+        short = u["uid"].split("#")[1]
+        hits = [f for f in findings if u["uid"] in str(f.get("location", "")) or re.search(rf"(?<![0-9]){short}(?![0-9])", str(f.get("location", "")))]
+        worst = min((f.get("severity") for f in hits if f.get("severity") in order), key=lambda s: order[s], default="")
+        rows.append([u["uid"], u.get("gm") or "", worst, ", ".join(f.get("id", "") for f in hits),
+                     " / ".join(str(f.get("issue", ""))[:80] for f in hits if f.get("severity") != "PASS")])
+    if rows:
+        sheet("장표별", ["장표", "Governing / Key Message", "최고 Severity", "관련 의견 ID", "주요 문제(요약)"], rows,
+              [12, 60, 13, 16, 80], color_col=2, track=True)
+
+    if comp:
+        cols = ["req_id", "requirement", "req_loc", "criteria", "response", "response_loc", "evidence", "status", "findability", "risk", "recommendation"]
+        sheet("RFP 대응", ["REQ", "RFP 요구사항", "RFP 위치", "평가항목", "제안 대응", "제안 위치", "Evidence", "Status", "Findability", "Risk", "권고"],
+              [[c.get(k, "") for k in cols] for c in comp], [9, 46, 11, 14, 40, 16, 18, 13, 11, 26, 30], color_col=7, track=True)
+    if ledger:
+        sheet("Evidence 대장", ["주장", "주장 위치", "Evidence 유형", "Evidence", "Evidence 위치", "Status"],
+              [[r.get("claim"), r.get("claim_loc"), r.get("type"), r.get("evidence"), r.get("evidence_loc"), r.get("status")] for r in ledger],
+              [46, 12, 16, 40, 14, 16], color_col=5)
+
+    cc = wd / "cross_check.json"
+    if cc.exists():
+        h = json.loads(cc.read_text(encoding="utf-8")).get("submission_hygiene") or {}
+        rows = [["슬라이드 밖 개체", o["uid"], o["text"], "제출본에서 삭제"] for o in h.get("off_slide_text", [])]
+        rows += [["보이는 작업메모", o["uid"], o["context"], "삭제"] for o in h.get("visible_work_notes", [])]
+        rows += [["노트", o["uid"], f"{o['chars']}자 " + ", ".join(o.get("work_notes", [])), "제출본에서 노트 삭제"] for o in h.get("speaker_notes", [])]
+        rows += [["주의 표현", o["uid"], o["context"], f"'{o['hit']}' — RFP 작성지침 확인"] for o in h.get("risky_wording", [])]
+        if rows:
+            sheet("제출위생", ["유형", "위치", "내용", "조치"], rows, [16, 12, 70, 30], track=True)
+
+    wb.save(wd / "00_redteam_review.xlsx")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("workdir")
@@ -223,6 +338,12 @@ def main():
         (wd / "04_evidence_ledger.md").write_text(
             "# 04 Evidence Ledger\n\n> 출처(evidence_loc) 없는 Evidence는 자동으로 UNSUBSTANTIATED.\n\n"
             + table(lrows, ["Claim", "Claim 위치", "Evidence 유형", "Evidence", "Evidence 위치", "Status"]) + "\n", encoding="utf-8")
+
+    # ---------------- 00 review workbook (all opinions in one Excel file)
+    try:
+        write_workbook(wd, meta, ex, core + hyg, comp, ledger, count)
+    except Exception as ex_:
+        guard_log.append(f"- 00_redteam_review.xlsx 생성 실패: {ex_}")
 
     g = ["# Guard Report\n"]
     g.append("## Schema errors\n" + ("\n".join(f"- {x}" for x in errors) if errors else "- 없음"))

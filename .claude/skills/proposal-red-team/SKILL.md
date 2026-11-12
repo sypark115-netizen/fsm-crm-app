@@ -134,6 +134,7 @@ python3 <skill>/scripts/report.py <작업폴더>
 ```
 
 `report.py`는 다음을 만들고, **Guard 검사**를 자동으로 수행한다:
+- `00_redteam_review.xlsx` — **검토 의견 통합 엑셀** (요약 / 검토의견 / 장표별 / RFP 대응 / Evidence 대장 / 제출위생). 각 시트에 담당자·조치 상태·조치 내용 열이 있어 제안팀이 바로 배분·추적한다. 사용자에게는 이 파일을 먼저 준다.
 - `01_executive.md` — Overall Assessment → Top 5 Winning Issues → MUST FIX → SHOULD FIX → What Works Well (+ Memory Test, Storyline)
 - `02_slide_review.md` — 장표별 상세 (Hygiene는 맨 뒤)
 - `03_rfp_compliance.xlsx` / `.md` — Mode 1
