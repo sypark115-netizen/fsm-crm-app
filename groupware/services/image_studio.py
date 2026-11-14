@@ -52,7 +52,13 @@ def _label(img: Image.Image, text: str, pos: str = "tl") -> None:
 
 
 def enhance(src, strength: float = 1.0) -> Image.Image:
-    img = ImageOps.autocontrast(_open(src), cutoff=1)
+    base = _open(src)
+    # 대비가 거의 없는 사진(흰 벽 등)에서 autocontrast 가 노이즈를 과증폭하지 않도록 원본과 섞는다
+    lo, hi = base.convert("L").getextrema()
+    if hi - lo < 60:
+        img = base
+    else:
+        img = Image.blend(base, ImageOps.autocontrast(base, cutoff=1), min(0.6, 0.4 * strength))
     img = ImageEnhance.Brightness(img).enhance(1 + 0.05 * strength)
     img = ImageEnhance.Color(img).enhance(1 + 0.15 * strength)
     img = ImageEnhance.Contrast(img).enhance(1 + 0.08 * strength)

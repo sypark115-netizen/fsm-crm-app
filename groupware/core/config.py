@@ -36,6 +36,7 @@ SITES: list[Site] = [
 # 급여 규칙 (근로기준법 기본값)
 REGULAR_HOURS_PER_DAY = 8.0
 OVERTIME_MULTIPLIER = 1.5
+FLAG_MIN_OT_HOURS = 0.5  # 이 미만의 미승인 초과(퇴근 체크 지연 등)는 검토 플래그 제외
 DEFAULT_HOURLY_WAGE = 10_320  # 2026년 최저시급, 회사 기준으로 조정
 
 # 개발 편의: GPS 미지원 환경(HTTP, PC)에서 좌표 수동 입력 허용

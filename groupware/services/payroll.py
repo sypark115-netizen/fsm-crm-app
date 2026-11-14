@@ -14,7 +14,7 @@ from io import BytesIO
 import pandas as pd
 from sqlalchemy import select
 
-from core.config import OVERTIME_MULTIPLIER, REGULAR_HOURS_PER_DAY
+from core.config import FLAG_MIN_OT_HOURS, OVERTIME_MULTIPLIER, REGULAR_HOURS_PER_DAY
 from core.database import engine
 from core.models import Attendance, RequestStatus, RequestType, User, WorkRequest
 
@@ -70,7 +70,7 @@ def daily_detail(att: pd.DataFrame, ot: pd.DataFrame) -> pd.DataFrame:
     df["paid_ot"] = df[["actual_ot", "approved_ot"]].min(axis=1)
 
     def _flag(r) -> str:
-        if r.actual_ot > 0 and r.approved_ot == 0:
+        if r.actual_ot >= FLAG_MIN_OT_HOURS and r.approved_ot == 0:
             return "미승인 초과근로"
         if r.approved_ot > r.actual_ot:
             return "승인>실근로"
@@ -107,9 +107,16 @@ LEDGER_COLUMNS_KO = {
 }
 
 
+DETAIL_COLUMNS_KO = {
+    "work_date": "일자", "emp_no": "사번", "name": "성명", "net_hours": "실근로(h)", "regular_hours": "기본(h)",
+    "actual_ot": "실연장(h)", "approved_ot": "승인연장(h)", "paid_ot": "인정연장(h)", "flag": "검토사유",
+}
+
+
 def to_excel(ledger: pd.DataFrame, detail: pd.DataFrame, year: int, month: int) -> bytes:
     buf = BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as xw:
         ledger.rename(columns=LEDGER_COLUMNS_KO).to_excel(xw, sheet_name=f"{year}-{month:02d} 급여대장", index=False)
-        detail.to_excel(xw, sheet_name="일자별 대조", index=False)
+        detail.rename(columns=DETAIL_COLUMNS_KO)[list(DETAIL_COLUMNS_KO.values())].to_excel(
+            xw, sheet_name="일자별 대조", index=False)
     return buf.getvalue()

@@ -37,6 +37,6 @@ if not rows:
     st.caption("신청 내역이 없습니다.")
 else:
     st.dataframe(pd.DataFrame([{
-        "날짜": r.target_date, "구분": TYPE_LABEL[r.type], "시간": r.hours or "-",
+        "날짜": r.target_date, "구분": TYPE_LABEL[r.type], "시간": r.hours or None,
         "사유": r.reason, "상태": STATUS_LABEL[r.status.value], "반려사유": r.reject_reason or "",
     } for r in rows]), hide_index=True, width="stretch")
