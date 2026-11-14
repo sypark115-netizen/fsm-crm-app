@@ -56,7 +56,7 @@ del "%BASE%\src.zip"
 cd /d "%BASE%\app"
 
 echo [3/5] 패키지 설치 (처음 한 번은 2~5분)...
-%PY% -m pip install --user --disable-pip-version-check -q streamlit sqlalchemy pandas openpyxl pillow streamlit-js-eval
+%PY% -m pip install --user --disable-pip-version-check -q streamlit sqlalchemy pandas openpyxl pillow streamlit-js-eval qrcode
 if errorlevel 1 (
     echo   [오류] 패키지 설치 실패. 위 메시지를 캡처해서 보내 주세요.
     pause
@@ -66,6 +66,12 @@ if errorlevel 1 (
 echo [4/5] 데모 데이터 준비...
 %PY% demo_data.py
 
+echo.
+choice /c YN /n /m "스마트폰으로도 접속할까요? HTTPS 주소와 QR코드를 만듭니다 [Y/N] "
+if errorlevel 2 goto RUNAPP
+call :PHONE
+
+:RUNAPP
 echo [5/5] 앱 실행 - 잠시 후 브라우저가 열립니다.
 echo.
 echo   주소: http://localhost:8501
@@ -76,3 +82,37 @@ rem headless: 첫 실행 이메일 입력 프롬프트를 건너뛰고, 브라�
 start "" /min cmd /c "timeout /t 8 /nobreak >nul & start http://localhost:8501"
 %PY% -m streamlit run app.py --server.port 8501 --server.headless true --browser.gatherUsageStats false
 pause
+exit /b 0
+
+rem ----------------------------------------------------------------
+rem  스마트폰 접속: Cloudflare 임시 터널로 https 주소 발급 (GPS 동작 조건)
+rem ----------------------------------------------------------------
+:PHONE
+echo   스마트폰 연결 준비 중...
+if not exist "%BASE%\cloudflared.exe" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile '%BASE%\cloudflared.exe'"
+)
+if not exist "%BASE%\cloudflared.exe" (
+    echo   [안내] 터널 프로그램 다운로드 실패 - PC에서만 실행합니다.
+    exit /b 0
+)
+if exist "%BASE%\tunnel.log" del "%BASE%\tunnel.log"
+if exist "%BASE%\phone_url.txt" del "%BASE%\phone_url.txt"
+start "Groupware phone tunnel - do not close" /min "%BASE%\cloudflared.exe" tunnel --url http://localhost:8501 --logfile "%BASE%\tunnel.log"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "for($i=0;$i -lt 40;$i++){ if(Test-Path '%BASE%\tunnel.log'){ $m = Select-String -Path '%BASE%\tunnel.log' -Pattern 'https://(?!api\.)[a-z0-9-]+\.trycloudflare\.com' | Select-Object -First 1; if($m){ Set-Content -Path '%BASE%\phone_url.txt' -Value $m.Matches[0].Value -NoNewline; exit 0 } }; Start-Sleep -Seconds 1 }; exit 1"
+if not exist "%BASE%\phone_url.txt" (
+    echo   [안내] 스마트폰 주소 발급 실패 - PC에서만 실행합니다.
+    exit /b 0
+)
+set /p PHONEURL=<"%BASE%\phone_url.txt"
+%PY% -c "import qrcode,sys; qrcode.make(sys.argv[1]).save(sys.argv[2])" "%PHONEURL%" "%BASE%\phone_qr.png"
+echo.
+echo   ==========================================================
+echo     스마트폰 주소: %PHONEURL%
+echo     - 화면에 뜬 QR코드를 휴대폰 카메라로 찍으세요.
+echo     - 최소화된 "phone tunnel" 창을 닫으면 주소가 끊깁니다.
+echo     - 실행할 때마다 주소가 바뀝니다.
+echo   ==========================================================
+echo.
+if exist "%BASE%\phone_qr.png" start "" "%BASE%\phone_qr.png"
+exit /b 0
