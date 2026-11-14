@@ -52,7 +52,7 @@ tests/                     pytest (서비스 레이어)
 | 변수 | 기본값 | 설명 |
 |---|---|---|
 | `GW_DATA_DIR` | `./data` | DB·업로드·발행물 저장 위치 |
-| `GW_HQ_LAT`, `GW_HQ_LNG` | 서울시청 | 출퇴근 기준 좌표 (반경 150m) |
+| `GW_HQ_LAT`, `GW_HQ_LNG` | 종로 1 (37.5710, 126.9780) | 출퇴근 기준 좌표 (반경 150m) |
 | `GW_ALLOW_MANUAL_GPS` | `1` | 개발용 좌표 수동 입력 (운영은 `0`) |
 | `GW_HOMETAX_MODE` | `mock` | `live` 시 실제 Playwright 실행 |
 | `GW_HOMETAX_CERT_PASSWORD` | – | 공동인증서 비밀번호 (코드/DB 저장 금지) |

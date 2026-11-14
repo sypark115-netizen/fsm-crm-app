@@ -30,7 +30,7 @@ class Site:
 
 # 기준 좌표 — 실제 회사 좌표로 교체
 SITES: list[Site] = [
-    Site("본사", float(os.getenv("GW_HQ_LAT", "37.5665")), float(os.getenv("GW_HQ_LNG", "126.9780"))),
+    Site("본사(종로 1)", float(os.getenv("GW_HQ_LAT", "37.5710")), float(os.getenv("GW_HQ_LNG", "126.9780"))),
 ]
 
 # 급여 규칙 (근로기준법 기본값)
