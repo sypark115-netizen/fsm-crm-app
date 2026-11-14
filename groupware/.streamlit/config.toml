@@ -1,0 +1,9 @@
+[server]
+maxUploadSize = 50          # MB, 현장 사진 다중 업로드 대비
+
+[theme]
+primaryColor = "#1E6FFF"    # '외부 노출' 파란 토글과 통일
+base = "light"
+
+[client]
+toolbarMode = "minimal"
