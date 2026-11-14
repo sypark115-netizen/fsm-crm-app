@@ -8,10 +8,10 @@ from core.models import Role, User
 from core.security import hash_password
 
 DEMO_USERS = [
-    ("A001", "김대표", Role.ADMIN, "admin1234", "경영지원", 20_000),
-    ("M001", "이마케터", Role.MARKETER, "mkt1234", "마케팅", 13_000),
-    ("W001", "박현장", Role.WORKER, "1234", "시공1팀", 12_000),
-    ("W002", "최기사", Role.WORKER, "1234", "시공2팀", 11_500),
+    ("A001", "김대표", Role.ADMIN, "test1234", "경영지원", 20_000),
+    ("M001", "이마케터", Role.MARKETER, "test1234", "마케팅", 13_000),
+    ("W001", "박현장", Role.WORKER, "test1234", "시공1팀", 12_000),
+    ("W002", "최기사", Role.WORKER, "test1234", "시공2팀", 11_500),
 ]
 
 

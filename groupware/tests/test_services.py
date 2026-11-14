@@ -30,7 +30,7 @@ def _jpeg(color="red", size=(800, 600)):
 
 
 def test_auth_roles():
-    assert authenticate("w001", "1234").role == Role.WORKER  # 대소문자 무시
+    assert authenticate("w001", "test1234").role == Role.WORKER  # 대소문자 무시
     assert authenticate("A001", "wrong") is None
 
 

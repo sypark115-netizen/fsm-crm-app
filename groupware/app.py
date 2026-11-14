@@ -48,7 +48,7 @@ def login_page() -> None:
                 login(u)
                 st.rerun()
     with st.expander("데모 계정"):
-        st.markdown("- 관리자 `A001` / `admin1234`\n- 마케터 `M001` / `mkt1234`\n- 작업자 `W001` / `1234`")
+        st.markdown("비밀번호는 모두 `test1234`\n- 관리자 `A001`\n- 마케터 `M001`\n- 작업자 `W001`, `W002`")
 
 
 def logout_page() -> None:

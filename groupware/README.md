@@ -14,11 +14,15 @@ streamlit run app.py
 
 데모 계정 (최초 실행 시 자동 생성 — 운영 전 반드시 변경)
 
-| 역할 | 사번 | 비밀번호 |
-|---|---|---|
-| 관리자(admin) | A001 | admin1234 |
-| 마케터(marketer) | M001 | mkt1234 |
-| 작업자(worker) | W001 / W002 | 1234 |
+비밀번호는 모두 `test1234`
+
+| 역할 | 사번 |
+|---|---|
+| 관리자(admin) | A001 |
+| 마케터(marketer) | M001 |
+| 작업자(worker) | W001 / W002 |
+
+이미 `data/` 폴더가 있는 상태에서 비밀번호를 초기화하려면 `python reset_passwords.py` 실행.
 
 ## 구조
 
