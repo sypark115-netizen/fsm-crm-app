@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f5f1;
+  --ink: #1c1917;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.prose-ko h1 { font-size: 1.35rem; font-weight: 700; margin: 1.4rem 0 .6rem; }
+.prose-ko h2 { font-size: 1.15rem; font-weight: 700; margin: 1.3rem 0 .5rem; }
+.prose-ko h3 { font-size: 1rem; font-weight: 700; margin: 1.1rem 0 .4rem; }
+.prose-ko p { line-height: 1.85; margin: .55rem 0; }
+.prose-ko ul { list-style: disc; padding-left: 1.3rem; margin: .5rem 0; }
+.prose-ko ol { list-style: decimal; padding-left: 1.3rem; margin: .5rem 0; }
+.prose-ko li { line-height: 1.8; margin: .2rem 0; }
+.prose-ko blockquote { border-left: 3px solid #d6d3d1; padding-left: .9rem; color: #57534e; margin: .7rem 0; }
+.prose-ko strong { font-weight: 700; color: #0c0a09; }
+.prose-ko hr { border-color: #e7e5e4; margin: 1.2rem 0; }

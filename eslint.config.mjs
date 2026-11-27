@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 별도 Next.js 프로젝트(개인 서재)는 자체 설정으로 관리
+    "digital-library/**",
   ]),
 ]);
 
